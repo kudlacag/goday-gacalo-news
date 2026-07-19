@@ -1,4 +1,4 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
-Sitemap: https://yourusername.github.io/godey-gacalo-news/sitemap.xml
+Sitemap: https://yourusername.github.io/goday-gacalo-news/sitemap.xml

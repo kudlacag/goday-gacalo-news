@@ -1,13 +1,13 @@
 {
   "files": {
-    "main.css": "/godey-gacalo-news/static/css/main.4a95eec7.css",
-    "main.js": "/godey-gacalo-news/static/js/main.0719df5e.js",
-    "index.html": "/godey-gacalo-news/index.html",
-    "main.4a95eec7.css.map": "/godey-gacalo-news/static/css/main.4a95eec7.css.map",
-    "main.0719df5e.js.map": "/godey-gacalo-news/static/js/main.0719df5e.js.map"
+    "main.css": "/goday-gacalo-news/static/css/main.d9102191.css",
+    "main.js": "/goday-gacalo-news/static/js/main.897cb79f.js",
+    "index.html": "/goday-gacalo-news/index.html",
+    "main.d9102191.css.map": "/goday-gacalo-news/static/css/main.d9102191.css.map",
+    "main.897cb79f.js.map": "/goday-gacalo-news/static/js/main.897cb79f.js.map"
   },
   "entrypoints": [
-    "static/css/main.4a95eec7.css",
-    "static/js/main.0719df5e.js"
+    "static/css/main.d9102191.css",
+    "static/js/main.897cb79f.js"
   ]
 }
