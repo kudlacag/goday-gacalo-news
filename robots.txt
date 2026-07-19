@@ -1,4 +1,8 @@
 # https://www.robotstxt.org/robotstxt.html
 User-agent: *
 Disallow:
+<<<<<<< HEAD
 Sitemap: https://kudlacag.github.io/goday-gacalo-news/sitemap.xml
+=======
+Sitemap: https://yourusername.github.io/goday-gacalo-news/sitemap.xml
+>>>>>>> 32d8477107224deb49f788960eee6cea06a81786
