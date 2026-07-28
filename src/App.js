@@ -175,7 +175,7 @@ function AppContent() {
                 </div>
             </nav>
 
-            <Routes basename="/godey-gacalo-news">
+            <Routes>
                 <Route path="/" element={<Home selectedCategory={selectedCategory} user={user} />} />
                 <Route path="/login" element={<Login setUser={setUser} setIsLoggedIn={setIsLoggedIn} />} />
                 <Route path="/register" element={<Register />} />
