@@ -252,3 +252,22 @@ body {
 .logout-btn:hover {
     color: #a71d2a;
 }
+
+/* Force logout button to show */
+.logout-mobile {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    color: #dc3545 !important;
+    background: #ffffff !important;
+    padding: 15px 20px !important;
+    font-size: 16px !important;
+    border-top: 2px solid #dc3545 !important;
+    margin-top: 10px !important;
+    width: 100% !important;
+    text-align: left !important;
+}
+
+.logout-mobile:hover {
+    background: #f8f9fa !important;
+}
