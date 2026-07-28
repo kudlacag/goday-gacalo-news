@@ -178,11 +178,11 @@ function AppContent() {
             </nav>
 
             <Routes>
+                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path="/" element={<Home selectedCategory={selectedCategory} user={user} />} />
                 <Route path="/login" element={<Login setUser={setUser} setIsLoggedIn={setIsLoggedIn} />} />
                 <Route path="/register" element={<Register />} />
                 <Route path="/forgot-password" element={<ForgotPassword />} />
-                <Route path="/reset-password/:token" element={<ResetPassword />} />
                 <Route path="/profile" element={<Profile user={user} setUser={setUser} />} />
                 <Route path="/admin" element={<Admin user={user} />} />
                 {/* ✅ Add ManageNews route - only accessible by admin/super_admin */}
