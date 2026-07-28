@@ -227,3 +227,28 @@ body {
         display: none !important;
     }
 }
+/* Mobile logout button */
+.logout-mobile {
+    background: none;
+    border: none;
+    color: #dc3545; /* Red color to stand out */
+    width: 100%;
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 16px;
+    cursor: pointer;
+}
+
+/* Desktop logout button */
+.logout-btn {
+    background: none;
+    border: none;
+    color: #dc3545;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 8px 12px;
+}
+
+.logout-btn:hover {
+    color: #a71d2a;
+}
