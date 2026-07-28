@@ -15,7 +15,7 @@ const ResetPassword = () => {
         if (!token) {
             setError('Invalid reset link. Please request a new password reset.');
         } else {
-            console.log('🔐 Reset token received:', token.substring(0, 10) + '...');
+            console.log('🔐 Reset token received:', token);
         }
     }, [token]);
 
@@ -38,7 +38,7 @@ const ResetPassword = () => {
         }
 
         try {
-            console.log('🔐 Resetting password with token:', token.substring(0, 10) + '...');
+            console.log('🔐 Resetting password...');
             console.log('📡 API URL:', `${API_URL}/api/auth/reset-password/${token}`);
             
             const response = await fetch(`${API_URL}/api/auth/reset-password/${token}`, {
