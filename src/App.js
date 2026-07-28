@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import Home from './pages/Home';
 import Admin from './pages/Admin';
 import NewsDetail from './pages/NewsDetail';
@@ -28,6 +28,22 @@ function AppContent() {
     const categories = ['All', 'Politics', 'Business', 'Sports', 'Entertainment', 'Health', 'Tech'];
 
     useEffect(() => {
+        // ✅ Handle redirect from 404.html
+        const redirectPath = sessionStorage.getItem('redirect');
+        if (redirectPath) {
+            sessionStorage.removeItem('redirect');
+            // Navigate to the saved path
+            navigate(redirectPath);
+        }
+
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+        if (token) {
+            fetchUser(token);
+        }
+    }, [navigate]);
+    useEffect(() => {
+
         // Check if user is logged in
         const token = localStorage.getItem('token');
         if (token) {
@@ -37,7 +53,7 @@ function AppContent() {
 
 
     const fetchUser = async (token) => {
-        console.log(window.location.hash);
+        // console.log(window.location.hash);
         try {
             // ✅ Use API_URL instead of hardcoded localhost
             const response = await fetch(`${API_URL}/api/auth/me`, {
