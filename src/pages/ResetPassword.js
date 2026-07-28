@@ -5,6 +5,10 @@ import { API_URL } from '../api/api';
 const ResetPassword = () => {
     const { token } = useParams();
     const navigate = useNavigate();
+      // ✅ Add this debug log
+    console.log('🔐 ResetPassword component is rendering!');
+    console.log('🔐 Token from URL:', token);
+    console.log('🔐 Current URL:', window.location.href);
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
