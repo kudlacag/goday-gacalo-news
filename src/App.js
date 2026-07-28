@@ -35,7 +35,9 @@ function AppContent() {
         }
     }, []);
 
+
     const fetchUser = async (token) => {
+        console.log(window.location.hash);
         try {
             // ✅ Use API_URL instead of hardcoded localhost
             const response = await fetch(`${API_URL}/api/auth/me`, {
