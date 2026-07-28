@@ -1,0 +1,448 @@
+const express = require('express');
+const router = express.Router();
+const News = require('../models/News');
+const User = require('../models/User');
+const jwt = require('jsonwebtoken');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
+const { auth, isAdmin, isSuperAdmin } = require('../middleware/auth');
+
+// ========== FILE UPLOAD ==========
+const uploadDir = './uploads';
+if (!fs.existsSync(uploadDir)) {
+    fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, 'uploads/');
+    },
+    filename: (req, file, cb) => {
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (mimetype && extname) {
+        return cb(null, true);
+    } else {
+        cb(new Error('Only images are allowed'));
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: fileFilter
+});
+
+// ========== ADMIN LOGIN ==========
+router.post('/login', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        
+        const user = await User.findOne({ email });
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid credentials'
+            });
+        }
+
+        if (user.role !== 'admin' && user.role !== 'super_admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Admin access required'
+            });
+        }
+
+        const isMatch = await user.comparePassword(password);
+        if (!isMatch) {
+            return res.status(401).json({
+                success: false,
+                error: 'Invalid credentials'
+            });
+        }
+
+        const token = jwt.sign(
+            { id: user._id, email: user.email, role: user.role },
+            process.env.JWT_SECRET || 'your-secret-key',
+            { expiresIn: '7d' }
+        );
+
+        res.json({
+            success: true,
+            token,
+            user: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('Login error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Server error during login'
+        });
+    }
+});
+
+// ========== CREATE NEWS ==========
+router.post('/news', auth, isAdmin, upload.array('images', 10), async (req, res) => {
+    console.log('📝 POST /api/admin/news');
+    console.log('📝 User:', req.user?.email);
+    console.log('📝 Body:', req.body);
+    console.log('📝 Files:', req.files ? req.files.length : 0);
+
+    try {
+        const { title, category, summary, content, featured, tags } = req.body;
+
+        if (!title || !category || !summary || !content) {
+            return res.status(400).json({
+                success: false,
+                error: 'Title, category, summary, and content are required'
+            });
+        }
+
+        const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
+        console.log('📸 Base URL for images:', baseUrl);
+
+        let imageUrls = [];
+        if (req.files && req.files.length > 0) {
+            imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+        }
+
+        const authorName = req.user.name || 'Godey Gacalo News';
+        const authorId = req.user._id;
+
+        const isFeatured = featured === 'true' || featured === true;
+
+        let tagsArray = [];
+        if (tags) {
+            tagsArray = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags;
+        }
+
+        const newNews = new News({
+            title: title.trim(),
+            category: category,
+            summary: summary.trim(),
+            content: content.trim(),
+            author: authorName,
+            authorId: authorId,
+            publishedDate: new Date(),
+            featured: isFeatured,
+            tags: tagsArray,
+            images: imageUrls
+        });
+
+        await newNews.save();
+        console.log('✅ News created:', newNews.title);
+
+        res.status(201).json({
+            success: true,
+            message: 'News created successfully!',
+            data: newNews
+        });
+    } catch (error) {
+        console.error('❌ Error creating news:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== UPDATE NEWS ==========
+router.put('/news/:id', auth, isAdmin, upload.array('images', 10), async (req, res) => {
+    try {
+        const { title, category, summary, content, featured, tags } = req.body;
+        const news = await News.findById(req.params.id);
+
+        if (!news) {
+            return res.status(404).json({
+                success: false,
+                error: 'News not found'
+            });
+        }
+
+        if (title) news.title = title.trim();
+        if (category) news.category = category;
+        if (summary) news.summary = summary.trim();
+        if (content) news.content = content.trim();
+        if (featured !== undefined) news.featured = featured === 'true' || featured === true;
+        if (tags) {
+            news.tags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags;
+        }
+
+        if (req.files && req.files.length > 0) {
+            const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
+            const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+            news.images = [...news.images, ...newImages];
+        }
+
+        await news.save();
+
+        res.json({
+            success: true,
+            message: 'News updated successfully!',
+            data: news
+        });
+    } catch (error) {
+        console.error('❌ Error updating news:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== DELETE NEWS ==========
+router.delete('/news/:id', auth, isAdmin, async (req, res) => {
+    try {
+        const news = await News.findByIdAndDelete(req.params.id);
+        if (!news) {
+            return res.status(404).json({
+                success: false,
+                error: 'News not found'
+            });
+        }
+        res.json({
+            success: true,
+            message: 'News deleted successfully'
+        });
+    } catch (error) {
+        console.error('❌ Error deleting news:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== GET ALL NEWS ==========
+router.get('/news', auth, isAdmin, async (req, res) => {
+    try {
+        const news = await News.find()
+            .sort({ publishedDate: -1 })
+            .populate('authorId', 'name email');
+
+        res.json({
+            success: true,
+            data: news
+        });
+    } catch (error) {
+        console.error('❌ Error fetching news:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== ✅ GET ALL USERS ==========
+router.get('/users', auth, isAdmin, async (req, res) => {
+    try {
+        const users = await User.find()
+            .select('-password -resetPasswordToken -resetPasswordExpires')
+            .sort({ createdAt: -1 });
+        
+        res.json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('❌ Error fetching users:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== ✅ CREATE USER ==========
+router.post('/users', auth, isSuperAdmin, async (req, res) => {
+    try {
+        const { name, username, email, password, mobile, age, sex, role } = req.body;
+        
+        if (!name || !username || !email || !password) {
+            return res.status(400).json({
+                success: false,
+                error: 'Name, username, email, and password are required'
+            });
+        }
+        
+        const existingUser = await User.findOne({
+            $or: [{ email: email.toLowerCase() }, { username: username.toLowerCase() }]
+        });
+        
+        if (existingUser) {
+            return res.status(400).json({
+                success: false,
+                error: 'User with this email or username already exists'
+            });
+        }
+        
+        const validRoles = ['user', 'reporter', 'admin', 'super_admin'];
+        if (role && !validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid role. Must be: user, reporter, admin, or super_admin'
+            });
+        }
+        
+        const user = new User({
+            name,
+            username: username.toLowerCase(),
+            email: email.toLowerCase(),
+            mobile: mobile || '',
+            age: age ? parseInt(age) : undefined,
+            sex: sex || 'Male',
+            password,
+            role: role || 'user'
+        });
+        
+        await user.save();
+        
+        res.status(201).json({
+            success: true,
+            message: 'User created successfully',
+            data: {
+                id: user._id,
+                name: user.name,
+                username: user.username,
+                email: user.email,
+                role: user.role
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error creating user:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== ✅ UPDATE USER ROLE ==========
+router.put('/users/:id/role', auth, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { role } = req.body;
+        
+        const validRoles = ['user', 'reporter', 'admin', 'super_admin'];
+        if (!validRoles.includes(role)) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid role. Must be: user, reporter, admin, or super_admin'
+            });
+        }
+        
+        if (role !== 'super_admin') {
+            const superAdminCount = await User.countDocuments({ role: 'super_admin' });
+            const user = await User.findById(id);
+            if (user && user.role === 'super_admin' && superAdminCount <= 1) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Cannot remove the last super_admin'
+                });
+            }
+        }
+        
+        const user = await User.findByIdAndUpdate(
+            id,
+            { role },
+            { new: true }
+        ).select('-password -resetPasswordToken -resetPasswordExpires');
+        
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+        
+        res.json({
+            success: true,
+            message: `User role updated to ${role}`,
+            data: user
+        });
+    } catch (error) {
+        console.error('❌ Error updating user role:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== ✅ DELETE USER ==========
+router.delete('/users/:id', auth, isSuperAdmin, async (req, res) => {
+    try {
+        const { id } = req.params;
+        
+        const user = await User.findById(id);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+        
+        if (user.role === 'super_admin') {
+            const superAdminCount = await User.countDocuments({ role: 'super_admin' });
+            if (superAdminCount <= 1) {
+                return res.status(400).json({
+                    success: false,
+                    error: 'Cannot delete the last super_admin'
+                });
+            }
+        }
+        
+        await User.findByIdAndDelete(id);
+        
+        res.json({
+            success: true,
+            message: 'User deleted successfully'
+        });
+    } catch (error) {
+        console.error('❌ Error deleting user:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+// ========== GET ADMIN STATS ==========
+router.get('/stats', auth, isAdmin, async (req, res) => {
+    try {
+        const totalNews = await News.countDocuments();
+        const totalUsers = await User.countDocuments();
+        const featuredNews = await News.countDocuments({ featured: true });
+
+        res.json({
+            success: true,
+            data: {
+                totalNews,
+                totalUsers,
+                featuredNews
+            }
+        });
+    } catch (error) {
+        console.error('❌ Error fetching stats:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+module.exports = router;
