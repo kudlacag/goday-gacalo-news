@@ -263,7 +263,7 @@ router.post('/forgot-password', async (req, res) => {
         console.log('✅ Reset token saved for user:', user.email);
 
         // ✅ FIX: Use frontend URL for reset link
-        const baseUrl = process.env.CLIENT_URL || 'https://www.godaygacalo.com';
+        const baseUrl = process.env.CLIENT_URL || 'https://www.godaygacalo.com/#';
         const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
         
         console.log('🔗 Reset URL:', resetUrl);
