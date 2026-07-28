@@ -17,7 +17,7 @@ const apiRequest = async (endpoint, options = {}) => {
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const url = `${API_URL}${cleanEndpoint}`;
         
-        console.log(`📡 API Request: ${url}`); // Debug log
+        // console.log(`📡 API Request: ${url}`); // Debug log
         
         const response = await fetch(url, {
             ...defaultOptions,
@@ -30,7 +30,7 @@ const apiRequest = async (endpoint, options = {}) => {
 
         // ✅ Check if response is OK
         if (!response.ok) {
-            console.error(`❌ HTTP Error ${response.status}: ${response.statusText} for ${endpoint}`);
+            // console.error(`❌ HTTP Error ${response.status}: ${response.statusText} for ${endpoint}`);
             return {
                 success: false,
                 error: `HTTP error ${response.status}: ${response.statusText}`,
@@ -70,7 +70,7 @@ const apiRequestFormData = async (endpoint, formData, options = {}) => {
         const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
         const url = `${API_URL}${cleanEndpoint}`;
         
-        console.log(`📡 API Request (FormData): ${url}`);
+        // console.log(`📡 API Request (FormData): ${url}`);
         
         const response = await fetch(url, {
             method: 'POST',

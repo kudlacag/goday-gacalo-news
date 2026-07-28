@@ -28,9 +28,9 @@ function Home({ selectedCategory = 'All', user }) {
 
     const fetchFeatured = async () => {
         try {
-            console.log('📡 Fetching featured news...');
+            // console.log('📡 Fetching featured news...');
             const response = await getFeaturedNews();
-            console.log('📡 Featured response:', response);
+            // console.log('📡 Featured response:', response);
             
             if (response && response.success) {
                 setFeatured(response.data || []);
@@ -53,7 +53,7 @@ function Home({ selectedCategory = 'All', user }) {
             }
 
             const response = await getNews(pageNum, 15, category);
-            console.log('📡 News response:', response);
+            // console.log('📡 News response:', response);
             
             if (response && response.success) {
                 if (pageNum === 1) {
