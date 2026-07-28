@@ -7,9 +7,10 @@ const bcrypt = require('bcryptjs');
 const { auth } = require('../middleware/auth');
 const sgMail = require('@sendgrid/mail');
 
+// ========== EMAIL SETUP (SendGrid Web API) ==========
+console.log('📧 Configuring SendGrid Web API...');
 
-
-// ✅ Get API key from environment variables (NOT hardcoded!)
+// ✅ Get API key from environment variables
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
 
 if (!SENDGRID_API_KEY) {
@@ -21,8 +22,6 @@ if (!SENDGRID_API_KEY) {
 }
 
 console.log('📧 FROM_EMAIL:', process.env.FROM_EMAIL || '❌ Not set');
-
-// ... rest of your routes remain the same ...
 
 // ========== REGISTER ==========
 router.post('/register', async (req, res) => {
@@ -263,13 +262,14 @@ router.post('/forgot-password', async (req, res) => {
 
         console.log('✅ Reset token saved for user:', user.email);
 
-        const baseUrl = process.env.CLIENT_URL || 'https://goday-gacalo-news.onrender.com';
+        // ✅ FIX: Use frontend URL for reset link
+        const baseUrl = process.env.CLIENT_URL || 'https://www.godaygacalo.com';
         const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
         
         console.log('🔗 Reset URL:', resetUrl);
 
         // Check if FROM_EMAIL is set
-        const fromEmail = process.env.FROM_EMAIL || 'noreply@godaygacalo.com';
+        const fromEmail = process.env.FROM_EMAIL;
         
         if (!fromEmail) {
             console.error('❌ FROM_EMAIL not set');
