@@ -92,6 +92,9 @@ router.post('/login', async (req, res) => {
     try {
         const { email, password } = req.body;
 
+        console.log('🔐 Login attempt for:', email);
+        console.log('📝 Password length:', password ? password.length : 0);
+
         if (!email || !password) {
             return res.status(400).json({
                 success: false,
@@ -101,13 +104,18 @@ router.post('/login', async (req, res) => {
 
         const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
+            console.log('❌ User not found:', email);
             return res.status(401).json({
                 success: false,
                 error: 'Invalid email or password'
             });
         }
 
+        console.log('✅ User found:', user.email);
+        console.log('🔐 Stored hash prefix:', user.password ? user.password.substring(0, 7) : 'None');
+
         if (!user.isActive) {
+            console.log('❌ User inactive:', user.email);
             return res.status(403).json({
                 success: false,
                 error: 'Account has been deactivated'
@@ -115,12 +123,17 @@ router.post('/login', async (req, res) => {
         }
 
         const isMatch = await user.comparePassword(password);
+        console.log('🔐 Password match:', isMatch);
+
         if (!isMatch) {
+            console.log('❌ Password mismatch for:', user.email);
             return res.status(401).json({
                 success: false,
                 error: 'Invalid email or password'
             });
         }
+
+        console.log('✅ Login successful for:', user.email);
 
         user.lastLogin = new Date();
         await user.save();
@@ -149,7 +162,7 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error);
+        console.error('❌ Login error:', error);
         res.status(500).json({ success: false, error: error.message });
     }
 });
@@ -353,7 +366,7 @@ router.post('/forgot-password', async (req, res) => {
     }
 });
 
-// ========== RESET PASSWORD ==========
+// ========== RESET PASSWORD (FIXED - Uses findOneAndUpdate) ==========
 router.post('/reset-password/:token', async (req, res) => {
     try {
         const { token } = req.params;
@@ -373,10 +386,30 @@ router.post('/reset-password/:token', async (req, res) => {
             .update(token)
             .digest('hex');
 
-        const user = await User.findOne({
-            resetPasswordToken: resetTokenHash,
-            resetPasswordExpires: { $gt: Date.now() }
-        });
+        // ✅ Hash the password ONCE
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+
+        console.log('🔐 Hashed password prefix:', hashedPassword.substring(0, 7));
+
+        // ✅ Use findOneAndUpdate to bypass pre-save hook
+        const user = await User.findOneAndUpdate(
+            {
+                resetPasswordToken: resetTokenHash,
+                resetPasswordExpires: { $gt: Date.now() }
+            },
+            {
+                $set: {
+                    password: hashedPassword,
+                    resetPasswordToken: undefined,
+                    resetPasswordExpires: undefined
+                }
+            },
+            {
+                new: true, // Return the updated document
+                runValidators: false // ✅ Skip validators to prevent re-hashing
+            }
+        );
 
         if (!user) {
             console.log('❌ Invalid or expired token');
@@ -386,17 +419,8 @@ router.post('/reset-password/:token', async (req, res) => {
             });
         }
 
-        console.log('✅ Valid token found for user:', user.email);
-
-        const salt = await bcrypt.genSalt(10);
-        const hashedPassword = await bcrypt.hash(password, salt);
-
-        user.password = hashedPassword;
-        user.resetPasswordToken = undefined;
-        user.resetPasswordExpires = undefined;
-        await user.save();
-
         console.log('✅ Password reset successful for user:', user.email);
+        console.log('🔐 Stored hash prefix:', user.password ? user.password.substring(0, 7) : 'None');
 
         res.json({
             success: true,
@@ -450,10 +474,14 @@ router.post('/change-password', auth, async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(newPassword, salt);
 
-        user.password = hashedPassword;
-        await user.save();
+        // ✅ Use findOneAndUpdate for consistency
+        const updatedUser = await User.findOneAndUpdate(
+            { _id: userId },
+            { $set: { password: hashedPassword } },
+            { new: true, runValidators: false }
+        );
 
-        console.log('✅ Password changed for user:', user.email);
+        console.log('✅ Password changed for user:', updatedUser.email);
 
         res.json({
             success: true,
