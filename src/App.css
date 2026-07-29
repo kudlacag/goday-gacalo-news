@@ -107,7 +107,33 @@ body {
     color: white;
 }
 
-/* Hamburger Button */
+/* ===== CATEGORY LINKS - HOVER EFFECTS ===== */
+.category-link {
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.category-link::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 50%;
+    width: 0;
+    height: 2px;
+    background: white;
+    transition: all 0.3s ease;
+    transform: translateX(-50%);
+}
+
+.category-link:hover::after {
+    width: 60%;
+}
+
+.category-link.active::after {
+    width: 60%;
+}
+
+/* ===== HAMBURGER ===== */
 .hamburger {
     display: none;
     flex-direction: column;
@@ -138,8 +164,8 @@ body {
     transform: rotate(-45deg) translate(7px, -6px);
 }
 
-/* Desktop Navigation */
-.desktop {
+/* ===== DESKTOP NAV ===== */
+.nav-links.desktop {
     display: flex;
     gap: 8px;
     align-items: center;
@@ -207,7 +233,7 @@ body {
     color: #ff6b6b;
 }
 
-/* Mobile Menu */
+/* ===== MOBILE MENU ===== */
 .mobile-menu {
     display: none;
     flex-direction: column;
@@ -231,14 +257,12 @@ body {
     overflow-y: auto;
 }
 
-/* Mobile Categories */
 .mobile-categories {
     display: flex;
     flex-direction: column;
     gap: 4px;
 }
 
-/* Mobile User Section */
 .mobile-user-section {
     display: flex;
     flex-direction: column;
@@ -276,7 +300,7 @@ body {
     font-weight: 600;
 }
 
-/* ✅ Logout Button - Always visible */
+/* ===== LOGOUT BUTTONS ===== */
 .logout-mobile {
     color: #dc3545 !important;
     font-weight: bold;
@@ -309,7 +333,9 @@ body {
     color: white !important;
 }
 
-/* ========== RESPONSIVE ========== */
+/* ===== RESPONSIVE BREAKPOINTS ===== */
+
+/* Mobile: All categories in dropdown */
 @media (max-width: 768px) {
     .hamburger {
         display: flex;
@@ -326,15 +352,43 @@ body {
     .mobile-menu.open {
         display: flex;
     }
-}
 
-@media (min-width: 769px) {
-    .mobile-menu {
-        display: none !important;
+    .dropdown-container {
+        display: none;
     }
 }
 
-/* ========== FORCE MOBILE MENU VISIBILITY ========== */
+/* Tablet: First 2 categories visible, rest in dropdown */
+@media (min-width: 769px) and (max-width: 1024px) {
+    .mobile-menu {
+        display: none !important;
+    }
+
+    .hamburger {
+        display: none;
+    }
+
+    .dropdown-container {
+        display: inline-block;
+    }
+}
+
+/* Desktop: First 3 categories visible, rest in dropdown */
+@media (min-width: 1025px) {
+    .mobile-menu {
+        display: none !important;
+    }
+
+    .hamburger {
+        display: none;
+    }
+
+    .dropdown-container {
+        display: inline-block;
+    }
+}
+
+/* ===== FORCE MOBILE MENU VISIBILITY ===== */
 .mobile-menu {
     display: none !important;
 }

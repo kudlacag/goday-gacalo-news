@@ -10,11 +10,8 @@ import ResetPassword from './pages/ResetPassword';
 import Profile from './pages/Profile';
 import './App.css';
 import NotFound from './pages/NotFound';
-// ✅ Import API_URL
 import { API_URL } from './api/api';
-// ✅ Import UserManagement
 import UserManagement from './pages/UserManagement';
-// ✅ Import ManageNews
 import ManageNews from './pages/ManageNews';
 
 function AppContent() {
@@ -26,27 +23,56 @@ function AppContent() {
     const navigate = useNavigate();
     const location = useLocation();
 
-    const categories = ['All', 'Politics', 'Business', 'Sports', 'Entertainment', 'Health', 'Tech'];
+    // Categories in Somali
+    const categories = [
+        { key: 'All', label: 'Dhammaan' },
+        { key: 'Politics', label: 'Siyaasada' },
+        { key: 'Business', label: 'Dhaqaalaha' },
+        { key: 'Sports', label: 'Ciyaaraha' },
+        { key: 'Entertainment', label: 'Suugaanta' },
+        { key: 'Health', label: 'Caafimaadka' },
+        { key: 'Tech', label: 'Teknolojiyada' }
+    ];
+
+    // Categories for dropdown (all except first 3 on desktop, first 2 on tablet)
+    const getVisibleCategories = () => {
+        const width = window.innerWidth;
+        if (width <= 768) return []; // Mobile - all in dropdown
+        if (width <= 1024) return categories.slice(0, 2); // Tablet - first 2 visible
+        return categories.slice(0, 3); // Desktop - first 3 visible
+    };
+
+    const getDropdownCategories = () => {
+        const width = window.innerWidth;
+        if (width <= 768) return categories; // Mobile - all in dropdown
+        if (width <= 1024) return categories.slice(2); // Tablet - rest in dropdown
+        return categories.slice(3); // Desktop - rest in dropdown
+    };
 
     useEffect(() => {
-        // ✅ Handle redirect from 404.html
         const redirectPath = sessionStorage.getItem('redirect');
         if (redirectPath) {
             sessionStorage.removeItem('redirect');
-            // Navigate to the saved path
             navigate(redirectPath);
         }
 
-        // Check if user is logged in
         const token = localStorage.getItem('token');
         if (token) {
             fetchUser(token);
         }
     }, [navigate]);
 
+    useEffect(() => {
+        const handleResize = () => {
+            // Close dropdown on resize to avoid layout issues
+            setIsCategoryDropdownOpen(false);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const fetchUser = async (token) => {
         try {
-            // ✅ Use API_URL instead of hardcoded localhost
             const response = await fetch(`${API_URL}/api/auth/me`, {
                 headers: {
                     'Authorization': `Bearer ${token}`
@@ -64,11 +90,11 @@ function AppContent() {
         }
     };
 
-    const handleCategoryClick = (category) => {
-        setSelectedCategory(category);
+    const handleCategoryClick = (categoryKey) => {
+        setSelectedCategory(categoryKey);
         setIsCategoryDropdownOpen(false);
         setIsMenuOpen(false);
-        navigate(category === 'All' ? '/' : `/?category=${category}`);
+        navigate(categoryKey === 'All' ? '/' : `/?category=${categoryKey}`);
     };
 
     const handleLogout = () => {
@@ -87,20 +113,26 @@ function AppContent() {
         setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
     };
 
-    // Check if user is admin
     const isAdmin = user?.role === 'admin' || user?.role === 'super_admin';
     const isSuperAdmin = user?.role === 'super_admin';
 
+    // Get the label for the selected category
+    const getSelectedLabel = () => {
+        const cat = categories.find(c => c.key === selectedCategory);
+        return cat ? cat.label : 'Dhammaan';
+    };
+
+    const visibleCats = getVisibleCategories();
+    const dropdownCats = getDropdownCategories();
+
     return (
         <div className="App">
-            {/* Navigation */}
             <nav className="nav-bar">
                 <div className="nav-container">
                     <Link to="/" className="nav-logo" onClick={() => setSelectedCategory('All')}>
                         📰 Godey News
                     </Link>
 
-                    {/* Hamburger Menu Button */}
                     <button className={`hamburger ${isMenuOpen ? 'open' : ''}`} onClick={toggleMenu}>
                         <span className="bar"></span>
                         <span className="bar"></span>
@@ -109,41 +141,52 @@ function AppContent() {
 
                     {/* Desktop Navigation */}
                     <div className="nav-links desktop">
-                        {/* ✅ Categories Dropdown */}
-                        <div className="dropdown-container">
-                            <button 
-                                className={`dropdown-toggle nav-link ${isCategoryDropdownOpen ? 'active' : ''}`}
-                                onClick={toggleCategoryDropdown}
+                        {/* Visible Categories */}
+                        {visibleCats.map((cat) => (
+                            <button
+                                key={cat.key}
+                                className={`nav-link category-link ${selectedCategory === cat.key ? 'active' : ''}`}
+                                onClick={() => handleCategoryClick(cat.key)}
                             >
-                                {selectedCategory} ▼
+                                {cat.label}
                             </button>
-                            {isCategoryDropdownOpen && (
-                                <div className="dropdown-menu">
-                                    {categories.map((cat, index) => (
-                                        <button
-                                            key={index}
-                                            className={`dropdown-item ${selectedCategory === cat ? 'active' : ''}`}
-                                            onClick={() => handleCategoryClick(cat)}
-                                        >
-                                            {cat}
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
+                        ))}
+
+                        {/* Categories Dropdown */}
+                        {dropdownCats.length > 0 && (
+                            <div className="dropdown-container">
+                                <button 
+                                    className={`dropdown-toggle nav-link ${isCategoryDropdownOpen ? 'active' : ''}`}
+                                    onClick={toggleCategoryDropdown}
+                                >
+                                    Barnaamijyada ▼
+                                </button>
+                                {isCategoryDropdownOpen && (
+                                    <div className="dropdown-menu">
+                                        {dropdownCats.map((cat) => (
+                                            <button
+                                                key={cat.key}
+                                                className={`dropdown-item ${selectedCategory === cat.key ? 'active' : ''}`}
+                                                onClick={() => handleCategoryClick(cat.key)}
+                                            >
+                                                {cat.label}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {isLoggedIn ? (
                             <>
-                                {/* ✅ Show Admin Dashboard for admins and super admins */}
                                 {isAdmin && (
                                     <>
                                         <Link to="/admin" className="nav-link admin-link">📝 Dashboard</Link>
-                                        <Link to="/manage-news" className="nav-link admin-link">📰 Manage News</Link>
+                                        <Link to="/manage-news" className="nav-link admin-link">📰 Maamul</Link>
                                     </>
                                 )}
-                                {/* ✅ Show User Management for super admins only */}
                                 {isSuperAdmin && (
-                                    <Link to="/users" className="nav-link admin-link">👥 Users</Link>
+                                    <Link to="/users" className="nav-link admin-link">👥 Isticmaalayaasha</Link>
                                 )}
                                 <Link to="/profile" className="nav-link">
                                     👤 {user?.username}
@@ -161,22 +204,20 @@ function AppContent() {
 
                 {/* Mobile Menu */}
                 <div className={`mobile-menu ${isMenuOpen ? 'open' : ''}`}>
-                    {/* ✅ Categories in Mobile Menu */}
                     <div className="mobile-categories">
-                        {categories.map((cat, index) => (
+                        {categories.map((cat) => (
                             <button
-                                key={index}
-                                className={`mobile-link ${selectedCategory === cat ? 'active' : ''}`}
-                                onClick={() => handleCategoryClick(cat)}
+                                key={cat.key}
+                                className={`mobile-link ${selectedCategory === cat.key ? 'active' : ''}`}
+                                onClick={() => handleCategoryClick(cat.key)}
                             >
-                                {cat}
+                                {cat.label}
                             </button>
                         ))}
                     </div>
 
                     <hr className="mobile-divider" />
 
-                    {/* ✅ User Section */}
                     {isLoggedIn ? (
                         <>
                             <div className="mobile-user-section">
@@ -189,17 +230,16 @@ function AppContent() {
                                             📝 Dashboard
                                         </Link>
                                         <Link to="/manage-news" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                            📰 Manage News
+                                            📰 Maamul
                                         </Link>
                                     </>
                                 )}
                                 {isSuperAdmin && (
                                     <Link to="/users" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                        👥 Users
+                                        👥 Isticmaalayaasha
                                     </Link>
                                 )}
                             </div>
-                            {/* ✅ Logout Button - Always visible at bottom */}
                             <button onClick={handleLogout} className="mobile-link logout-mobile">
                                 🚪 Logout
                             </button>
@@ -221,9 +261,7 @@ function AppContent() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/profile" element={<Profile user={user} setUser={setUser} />} />
                 <Route path="/admin" element={<Admin user={user} />} />
-                {/* ✅ Add ManageNews route - only accessible by admin/super_admin */}
                 <Route path="/manage-news" element={<ManageNews />} />
-                {/* ✅ Add UserManagement route - only accessible by super_admin */}
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/news/:id" element={<NewsDetail user={user} />} />
                 <Route path="*" element={<NotFound />} />
