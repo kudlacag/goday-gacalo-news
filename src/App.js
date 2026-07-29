@@ -19,6 +19,7 @@ import ManageNews from './pages/ManageNews';
 
 function AppContent() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+    const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
     const [selectedCategory, setSelectedCategory] = useState('All');
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [user, setUser] = useState(null);
@@ -42,18 +43,8 @@ function AppContent() {
             fetchUser(token);
         }
     }, [navigate]);
-    useEffect(() => {
-
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
-        if (token) {
-            fetchUser(token);
-        }
-    }, []);
-
 
     const fetchUser = async (token) => {
-        // console.log(window.location.hash);
         try {
             // ✅ Use API_URL instead of hardcoded localhost
             const response = await fetch(`${API_URL}/api/auth/me`, {
@@ -63,7 +54,6 @@ function AppContent() {
             });
             const data = await response.json();
             if (data.success) {
-                // console.log('User data:', data.user);
                 setUser(data.user);
                 setIsLoggedIn(true);
             } else {
@@ -76,6 +66,7 @@ function AppContent() {
 
     const handleCategoryClick = (category) => {
         setSelectedCategory(category);
+        setIsCategoryDropdownOpen(false);
         setIsMenuOpen(false);
         navigate(category === 'All' ? '/' : `/?category=${category}`);
     };
@@ -89,6 +80,11 @@ function AppContent() {
 
     const toggleMenu = () => {
         setIsMenuOpen(!isMenuOpen);
+        setIsCategoryDropdownOpen(false);
+    };
+
+    const toggleCategoryDropdown = () => {
+        setIsCategoryDropdownOpen(!isCategoryDropdownOpen);
     };
 
     // Check if user is admin
@@ -113,16 +109,29 @@ function AppContent() {
 
                     {/* Desktop Navigation */}
                     <div className="nav-links desktop">
-                        {categories.map((cat, index) => (
-                            <Link
-                                to={cat === 'All' ? '/' : `/?category=${cat}`}
-                                key={index}
-                                className={`nav-link ${selectedCategory === cat ? 'active' : ''}`}
-                                onClick={() => setSelectedCategory(cat)}
+                        {/* ✅ Categories Dropdown */}
+                        <div className="dropdown-container">
+                            <button 
+                                className={`dropdown-toggle nav-link ${isCategoryDropdownOpen ? 'active' : ''}`}
+                                onClick={toggleCategoryDropdown}
                             >
-                                {cat}
-                            </Link>
-                        ))}
+                                {selectedCategory} ▼
+                            </button>
+                            {isCategoryDropdownOpen && (
+                                <div className="dropdown-menu">
+                                    {categories.map((cat, index) => (
+                                        <button
+                                            key={index}
+                                            className={`dropdown-item ${selectedCategory === cat ? 'active' : ''}`}
+                                            onClick={() => handleCategoryClick(cat)}
+                                        >
+                                            {cat}
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         {isLoggedIn ? (
                             <>
                                 {/* ✅ Show Admin Dashboard for admins and super admins */}
@@ -152,37 +161,48 @@ function AppContent() {
 
                 {/* Mobile Menu */}
                 <div className={`mobile-menu ${isMenuOpen ? 'open' : ''}`}>
-                    {categories.map((cat, index) => (
-                        <button
-                            key={index}
-                            className={`mobile-link ${selectedCategory === cat ? 'active' : ''}`}
-                            onClick={() => handleCategoryClick(cat)}
-                        >
-                            {cat}
-                        </button>
-                    ))}
+                    {/* ✅ Categories in Mobile Menu */}
+                    <div className="mobile-categories">
+                        {categories.map((cat, index) => (
+                            <button
+                                key={index}
+                                className={`mobile-link ${selectedCategory === cat ? 'active' : ''}`}
+                                onClick={() => handleCategoryClick(cat)}
+                            >
+                                {cat}
+                            </button>
+                        ))}
+                    </div>
+
                     <hr className="mobile-divider" />
+
+                    {/* ✅ User Section */}
                     {isLoggedIn ? (
                         <>
-                            {isAdmin && (
-                                <>
-                                    <Link to="/admin" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                        📝 Dashboard
-                                    </Link>
-                                    <Link to="/manage-news" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                        📰 Manage News
-                                    </Link>
-                                </>
-                            )}
-                            {isSuperAdmin && (
-                                <Link to="/users" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                    👥 Users
+                            <div className="mobile-user-section">
+                                <Link to="/profile" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                    👤 {user?.username}
                                 </Link>
-                            )}
-                            <Link to="/profile" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
-                                👤 {user?.username}
-                            </Link>
-                            <button onClick={handleLogout} className="mobile-link logout-mobile">Logout</button>
+                                {isAdmin && (
+                                    <>
+                                        <Link to="/admin" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                            📝 Dashboard
+                                        </Link>
+                                        <Link to="/manage-news" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                            📰 Manage News
+                                        </Link>
+                                    </>
+                                )}
+                                {isSuperAdmin && (
+                                    <Link to="/users" className="mobile-link" onClick={() => setIsMenuOpen(false)}>
+                                        👥 Users
+                                    </Link>
+                                )}
+                            </div>
+                            {/* ✅ Logout Button - Always visible at bottom */}
+                            <button onClick={handleLogout} className="mobile-link logout-mobile">
+                                🚪 Logout
+                            </button>
                         </>
                     ) : (
                         <>

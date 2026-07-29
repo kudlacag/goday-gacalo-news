@@ -42,6 +42,71 @@ body {
     gap: 8px;
 }
 
+/* ===== CATEGORY DROPDOWN ===== */
+.dropdown-container {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-toggle {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 5px 12px;
+    color: rgba(255, 255, 255, 0.7);
+    border-radius: 20px;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.dropdown-toggle:hover {
+    color: white;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.dropdown-toggle.active {
+    color: white;
+    background: rgba(255, 255, 255, 0.25);
+}
+
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    min-width: 160px;
+    z-index: 1001;
+    padding: 8px 0;
+    margin-top: 4px;
+}
+
+.dropdown-item {
+    display: block;
+    width: 100%;
+    padding: 10px 20px;
+    background: none;
+    border: none;
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: #1a202c;
+    transition: all 0.2s ease;
+    font-family: inherit;
+}
+
+.dropdown-item:hover {
+    background: #f0f4ff;
+    color: #2563eb;
+}
+
+.dropdown-item.active {
+    background: #2563eb;
+    color: white;
+}
+
 /* Hamburger Button */
 .hamburger {
     display: none;
@@ -127,6 +192,14 @@ body {
 
 .logout-btn {
     color: #ff6b6b;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.8rem;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-family: inherit;
+    transition: all 0.3s ease;
 }
 
 .logout-btn:hover {
@@ -138,7 +211,7 @@ body {
 .mobile-menu {
     display: none;
     flex-direction: column;
-    background: linear-gradient(135deg, #1a365d 0%, #2563eb 100%);
+    background: white;
     padding: 20px;
     gap: 8px;
     position: absolute;
@@ -153,18 +226,33 @@ body {
 
 .mobile-menu.open {
     display: flex;
-    max-height: 600px;
+    max-height: 80vh;
     padding: 20px;
+    overflow-y: auto;
+}
+
+/* Mobile Categories */
+.mobile-categories {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+/* Mobile User Section */
+.mobile-user-section {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 .mobile-divider {
     border: none;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    margin: 8px 0;
+    border-top: 1px solid #e2e8f0;
+    margin: 12px 0;
 }
 
 .mobile-link {
-    color: rgba(255, 255, 255, 0.8);
+    color: #1a202c;
     text-decoration: none;
     font-size: 1rem;
     padding: 12px 16px;
@@ -175,32 +263,50 @@ body {
     text-align: left;
     cursor: pointer;
     font-family: inherit;
+    width: 100%;
 }
 
 .mobile-link:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: white;
+    background: #f0f4ff;
 }
 
 .mobile-link.active {
-    background: rgba(255, 255, 255, 0.2);
+    background: #2563eb;
     color: white;
     font-weight: 600;
 }
 
+/* ✅ Logout Button - Always visible */
 .logout-mobile {
-    color: #ff6b6b;
+    color: #dc3545 !important;
+    font-weight: bold;
+    border-top: 2px solid #dc3545;
+    margin-top: 12px;
+    padding-top: 16px;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    background: none !important;
+    width: 100% !important;
+    text-align: left !important;
+    font-size: 1rem !important;
+    border-radius: 8px !important;
 }
 
 .logout-mobile:hover {
-    background: rgba(255, 107, 107, 0.2);
-    color: #ff6b6b;
+    background: #fff5f5 !important;
 }
 
 .register-mobile {
-    background: rgba(255, 255, 255, 0.15);
+    background: #2563eb;
+    color: white;
     text-align: center;
     font-weight: 600;
+}
+
+.register-mobile:hover {
+    background: #1a365d !important;
+    color: white !important;
 }
 
 /* ========== RESPONSIVE ========== */
@@ -227,47 +333,20 @@ body {
         display: none !important;
     }
 }
-/* Mobile logout button */
-.logout-mobile {
-    background: none;
-    border: none;
-    color: #dc3545; /* Red color to stand out */
-    width: 100%;
-    text-align: left;
-    padding: 12px 20px;
-    font-size: 16px;
-    cursor: pointer;
+
+/* ========== FORCE MOBILE MENU VISIBILITY ========== */
+.mobile-menu {
+    display: none !important;
 }
 
-/* Desktop logout button */
-.logout-btn {
-    background: none;
-    border: none;
-    color: #dc3545;
-    cursor: pointer;
-    font-size: 16px;
-    padding: 8px 12px;
+.mobile-menu.open {
+    display: flex !important;
 }
 
-.logout-btn:hover {
-    color: #a71d2a;
+.mobile-link {
+    display: block !important;
 }
 
-/* Force logout button to show */
 .logout-mobile {
     display: block !important;
-    visibility: visible !important;
-    opacity: 1 !important;
-    color: #dc3545 !important;
-    background: #ffffff !important;
-    padding: 15px 20px !important;
-    font-size: 16px !important;
-    border-top: 2px solid #dc3545 !important;
-    margin-top: 10px !important;
-    width: 100% !important;
-    text-align: left !important;
-}
-
-.logout-mobile:hover {
-    background: #f8f9fa !important;
 }

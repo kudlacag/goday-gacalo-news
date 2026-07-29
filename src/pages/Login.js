@@ -15,35 +15,25 @@ const Login = ({ setUser, setIsLoggedIn }) => {
         setLoading(true);
         setError('');
 
-        // ✅ Debug logs - help identify issues
-        console.log('🔐 Login attempt for:', email);
-        console.log('📝 Password length:', password.length);
-        console.log('📡 API URL:', `${API_URL}/api/auth/login`);
-
         try {
+            // ✅ Use API_URL instead of hardcoded localhost
             const response = await fetch(`${API_URL}/api/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password })
             });
 
-            console.log('📥 Response status:', response.status);
-
             const data = await response.json();
-            console.log('📥 Response data:', data);
-
             if (data.success) {
-                console.log('✅ Login successful for:', email);
                 localStorage.setItem('token', data.token);
                 setUser(data.user);
                 setIsLoggedIn(true);
                 navigate('/');
             } else {
-                console.log('❌ Login failed:', data.error);
                 setError(data.error || 'Login failed');
             }
         } catch (err) {
-            console.error('❌ Login error:', err);
+            console.error('Login error:', err);
             setError('Network error. Please try again.');
         } finally {
             setLoading(false);
