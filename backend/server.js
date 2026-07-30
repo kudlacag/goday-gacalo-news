@@ -24,7 +24,7 @@ const allowedOrigins = [
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin) return callback(null, true);
-        
+
         if (allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
@@ -90,13 +90,14 @@ try {
     const authRoutes = require('./routes/auth');
     const newsRoutes = require('./routes/news');
     const adminRoutes = require('./routes/admin');
+     const ogRoutes = require('./routes/og'); // ✅ Make sure this is here
 
     app.use('/api/auth', authRoutes);
     app.use('/api/news', newsRoutes);
     app.use('/api/admin', adminRoutes);
     // server.js - Add this with your other routes
-const ogRoutes = require('./routes/og');
-app.use('/og', ogRoutes);
+    const ogRoutes = require('./routes/og');
+    app.use('/og', ogRoutes);
 
     console.log('✅ Routes loaded successfully');
 } catch (error) {
@@ -143,29 +144,29 @@ app.get('/api/test-env', (req, res) => {
 app.post('/api/test-email', async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         if (!email) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Email is required' 
+            return res.status(400).json({
+                success: false,
+                error: 'Email is required'
             });
         }
 
         console.log('📧 Testing email configuration...');
-        
+
         const useEthereal = process.env.USE_ETHEREAL === 'true' || !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
-        
+
         let transporter;
         let mailOptions;
         let isEthereal = false;
 
         if (useEthereal) {
             console.log('📧 Using Ethereal Email for testing');
-            
+
             const testAccount = await nodemailer.createTestAccount();
             console.log('📧 Ethereal Email:', testAccount.user);
             console.log('🔑 Ethereal Password:', testAccount.pass);
-            
+
             transporter = nodemailer.createTransport({
                 host: 'smtp.ethereal.email',
                 port: 587,
@@ -175,9 +176,9 @@ app.post('/api/test-email', async (req, res) => {
                     pass: testAccount.pass
                 }
             });
-            
+
             isEthereal = true;
-            
+
             mailOptions = {
                 from: `"Godey Gacalo News" <${testAccount.user}>`,
                 to: email,
@@ -197,7 +198,7 @@ app.post('/api/test-email', async (req, res) => {
             };
         } else {
             console.log('📧 Using Gmail for testing');
-            
+
             if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
                 return res.status(500).json({
                     success: false,
@@ -250,15 +251,15 @@ app.post('/api/test-email', async (req, res) => {
         const info = await transporter.sendMail(mailOptions);
         console.log('✅ Test email sent successfully!');
         console.log('📧 Message ID:', info.messageId);
-        
+
         let previewUrl = null;
         if (isEthereal) {
             previewUrl = nodemailer.getTestMessageUrl(info);
             console.log('🔗 Preview URL:', previewUrl);
         }
-        
-        res.json({ 
-            success: true, 
+
+        res.json({
+            success: true,
             message: isEthereal ? 'Test email sent via Ethereal! Check the preview URL.' : 'Test email sent successfully! Please check your inbox.',
             messageId: info.messageId,
             to: email,
@@ -270,7 +271,7 @@ app.post('/api/test-email', async (req, res) => {
         console.error('Error code:', error.code);
         console.error('Error response:', error.response);
         console.error('Error stack:', error.stack);
-        
+
         let errorMessage = 'Failed to send test email.';
         if (error.code === 'EAUTH') {
             errorMessage = 'Email authentication failed. Please check your EMAIL_USER and EMAIL_PASS.';
@@ -279,9 +280,9 @@ app.post('/api/test-email', async (req, res) => {
         } else if (error.response && error.response.includes('535')) {
             errorMessage = 'Invalid email credentials. Please use an App Password for Gmail.';
         }
-        
-        res.status(500).json({ 
-            success: false, 
+
+        res.status(500).json({
+            success: false,
             error: errorMessage,
             details: process.env.NODE_ENV === 'development' ? error.message : undefined,
             code: error.code
@@ -293,11 +294,11 @@ app.post('/api/test-email', async (req, res) => {
 app.post('/api/test-forgot-password', async (req, res) => {
     try {
         const { email } = req.body;
-        
+
         if (!email) {
-            return res.status(400).json({ 
-                success: false, 
-                error: 'Email is required' 
+            return res.status(400).json({
+                success: false,
+                error: 'Email is required'
             });
         }
 
@@ -305,7 +306,7 @@ app.post('/api/test-forgot-password', async (req, res) => {
 
         const User = require('./models/User');
         const crypto = require('crypto');
-        
+
         const user = await User.findOne({ email: email.toLowerCase() });
         if (!user) {
             return res.status(200).json({
@@ -326,21 +327,21 @@ app.post('/api/test-forgot-password', async (req, res) => {
 
         const baseUrl = process.env.CLIENT_URL || 'https://goday-gacalo-news.onrender.com';
         const resetUrl = `${baseUrl}/reset-password/${resetToken}`;
-        
+
         console.log('🔗 Reset URL:', resetUrl);
 
         const useEthereal = process.env.USE_ETHEREAL === 'true' || !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
-        
+
         let transporter;
         let mailOptions;
         let isEthereal = false;
 
         if (useEthereal) {
             console.log('📧 Using Ethereal Email');
-            
+
             const testAccount = await nodemailer.createTestAccount();
             console.log('📧 Ethereal Email:', testAccount.user);
-            
+
             transporter = nodemailer.createTransport({
                 host: 'smtp.ethereal.email',
                 port: 587,
@@ -350,9 +351,9 @@ app.post('/api/test-forgot-password', async (req, res) => {
                     pass: testAccount.pass
                 }
             });
-            
+
             isEthereal = true;
-            
+
             mailOptions = {
                 from: `"Godey Gacalo News" <${testAccount.user}>`,
                 to: user.email,
@@ -427,7 +428,7 @@ app.post('/api/test-forgot-password', async (req, res) => {
 
         const info = await transporter.sendMail(mailOptions);
         console.log('✅ Test reset email sent to:', user.email);
-        
+
         let previewUrl = null;
         if (isEthereal) {
             previewUrl = nodemailer.getTestMessageUrl(info);
