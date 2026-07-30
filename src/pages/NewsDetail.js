@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 // ✅ Import from api.js
 import { getSingleNews, API_URL, getImageUrl } from '../api/api';
 import ImageSlider from '../components/ImageSlider';
+// ✅ Import ShareButtons component
+import ShareButtons from '../components/ShareButtons';
 
 function NewsDetail({ user }) {
     const { id } = useParams();
@@ -149,6 +151,9 @@ function NewsDetail({ user }) {
                         <span>💬 {news.comments?.length || 0} comments</span>
                     </div>
                 </div>
+
+                {/* ✅ Share Buttons - Placed after header for better visibility */}
+                <ShareButtons article={news} />
 
                 {/* ✅ Uses imported getImageUrl */}
                 {news.images && news.images.length > 0 && (

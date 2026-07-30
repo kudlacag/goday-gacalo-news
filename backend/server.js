@@ -94,6 +94,9 @@ try {
     app.use('/api/auth', authRoutes);
     app.use('/api/news', newsRoutes);
     app.use('/api/admin', adminRoutes);
+    // server.js - Add this with your other routes
+const ogRoutes = require('./routes/og');
+app.use('/og', ogRoutes);
 
     console.log('✅ Routes loaded successfully');
 } catch (error) {
