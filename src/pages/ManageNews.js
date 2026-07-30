@@ -19,14 +19,23 @@ const ManageNews = ({ user }) => {
     });
     const [imageFiles, setImageFiles] = useState([]);
 
-    // ✅ Check if user has permission
-    const canManageNews = user?.role === 'reporter' || user?.role === 'admin' || user?.role === 'super_admin';
+    // ✅ Check if user has permission - Allow super_admin, admin, and reporter
+    const canManageNews = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'reporter';
 
     useEffect(() => {
+        // ✅ If no user, check localStorage for token
+        const token = localStorage.getItem('token');
+        
+        if (!user && !token) {
+            navigate('/login');
+            return;
+        }
+
         if (!canManageNews) {
             navigate('/');
             return;
         }
+
         fetchNews();
     }, [user]);
 
@@ -156,19 +165,37 @@ const ManageNews = ({ user }) => {
     // ✅ Check if user can see all articles or only their own
     const canSeeAllArticles = user?.role === 'admin' || user?.role === 'super_admin';
 
+    // ✅ If not logged in or no permission
+    if (!user && !localStorage.getItem('token')) {
+        return (
+            <div className="manage-news-container">
+                <div className="container">
+                    <h2>Please Login</h2>
+                    <p>You need to be logged in to access this page.</p>
+                    <button onClick={() => navigate('/login')} className="btn-primary">Login</button>
+                </div>
+            </div>
+        );
+    }
+
     if (!canManageNews) {
         return (
-            <div className="container">
-                <h2>Access Denied</h2>
-                <p>You do not have permission to manage news.</p>
+            <div className="manage-news-container">
+                <div className="container">
+                    <h2>Access Denied</h2>
+                    <p>You do not have permission to manage news.</p>
+                    <button onClick={() => navigate('/')} className="btn-primary">Return to Home</button>
+                </div>
             </div>
         );
     }
 
     if (loading) {
         return (
-            <div className="container">
-                <h2>Loading...</h2>
+            <div className="manage-news-container">
+                <div className="container">
+                    <h2>Loading...</h2>
+                </div>
             </div>
         );
     }
@@ -178,9 +205,9 @@ const ManageNews = ({ user }) => {
             <div className="container">
                 <h2>📰 Manage News</h2>
                 <p className="subtitle">
-                    {user?.role === 'reporter' ? 'You can only see and manage your own articles.' :
-                     user?.role === 'admin' ? 'You can see all articles but only edit/delete your own.' :
-                     'You have full access to all articles.'}
+                    {user?.role === 'reporter' ? '👤 Reporter - You can only see and manage your own articles.' :
+                     user?.role === 'admin' ? '👤 Admin - You can see all articles but only edit/delete your own.' :
+                     '👑 Super Admin - You have full access to all articles.'}
                 </p>
 
                 {error && <div className="error-message">{error}</div>}
@@ -229,6 +256,7 @@ const ManageNews = ({ user }) => {
                                 rows="2"
                                 required
                             />
+                            <small>{formData.summary.length}/200</small>
                         </div>
 
                         <div className="form-group">

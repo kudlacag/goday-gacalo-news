@@ -261,7 +261,7 @@ function AppContent() {
                 <Route path="/forgot-password" element={<ForgotPassword />} />
                 <Route path="/profile" element={<Profile user={user} setUser={setUser} />} />
                 <Route path="/admin" element={<Admin user={user} />} />
-                <Route path="/manage-news" element={<ManageNews />} />
+                <Route path="/manage-news" element={<ManageNews user={user} />} />
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/news/:id" element={<NewsDetail user={user} />} />
                 <Route path="*" element={<NotFound />} />
