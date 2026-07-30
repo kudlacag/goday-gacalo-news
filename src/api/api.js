@@ -143,7 +143,7 @@ export const authAPI = {
         method: 'POST',
         body: JSON.stringify(credentials)
     }),
-    getProfile: () => apiRequest('/api/auth/me'), // ✅ Fixed: use /me instead of /profile
+    getProfile: () => apiRequest('/api/auth/me'),
     updateProfile: (userData) => apiRequest('/api/auth/profile', {
         method: 'PUT',
         body: JSON.stringify(userData)
@@ -164,9 +164,10 @@ export const authAPI = {
 
 // ========== ADMIN API ==========
 export const adminAPI = {
+    // ✅ Updated: Now accepts email and password
     login: (credentials) => apiRequest('/api/auth/admin-login', {
         method: 'POST',
-        body: JSON.stringify(credentials)
+        body: JSON.stringify(credentials) // { email, password }
     }),
     
     // ✅ createNews - uses FormData, not JSON
@@ -215,9 +216,10 @@ export const adminAPI = {
 };
 
 // ========== ADMIN LOGIN (Named Export) ==========
+// ✅ Updated: Now accepts email and password
 export const adminLogin = (credentials) => apiRequest('/api/auth/admin-login', {
     method: 'POST',
-    body: JSON.stringify(credentials)
+    body: JSON.stringify(credentials) // { email, password }
 });
 
 // ========== IMAGE URL HELPER ==========

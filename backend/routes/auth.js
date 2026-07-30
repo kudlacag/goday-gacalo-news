@@ -167,33 +167,35 @@ router.post('/login', async (req, res) => {
     }
 });
 
-// ========== ADMIN LOGIN ==========
+// ========== ADMIN LOGIN (FIXED - Added 'reporter' role) ==========
 router.post('/admin-login', async (req, res) => {
     try {
-        const { password } = req.body;
+        const { email, password } = req.body;
 
-        if (!password) {
+        if (!email || !password) {
             return res.status(400).json({
                 success: false,
-                error: 'Password is required'
+                error: 'Email and password are required'
             });
         }
 
+        // ✅ Allow reporter, admin, and super_admin
         const admin = await User.findOne({
-            role: { $in: ['super_admin', 'admin'] }
+            email: email.toLowerCase(),
+            role: { $in: ['super_admin', 'admin', 'reporter'] }  // ✅ Added 'reporter'
         });
 
         if (!admin) {
             return res.status(404).json({
                 success: false,
-                error: 'Admin account not found. Please register first.'
+                error: 'Account not found. Please register first.'
             });
         }
 
         if (!admin.isActive) {
             return res.status(403).json({
                 success: false,
-                error: 'Admin account has been deactivated'
+                error: 'Account has been deactivated'
             });
         }
 
@@ -201,7 +203,7 @@ router.post('/admin-login', async (req, res) => {
         if (!isMatch) {
             return res.status(401).json({
                 success: false,
-                error: 'Invalid admin password'
+                error: 'Invalid email or password'
             });
         }
 
@@ -216,7 +218,7 @@ router.post('/admin-login', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Admin login successful!',
+            message: 'Login successful!',
             token,
             user: {
                 id: admin._id,
