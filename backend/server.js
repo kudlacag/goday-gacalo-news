@@ -90,8 +90,7 @@ try {
     const authRoutes = require('./routes/auth');
     const newsRoutes = require('./routes/news');
     const adminRoutes = require('./routes/admin');
-     const ogRoutes = require('./routes/og'); // ✅ Make sure this is here
-
+    
     app.use('/api/auth', authRoutes);
     app.use('/api/news', newsRoutes);
     app.use('/api/admin', adminRoutes);
