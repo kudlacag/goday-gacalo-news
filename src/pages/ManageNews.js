@@ -1,16 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../api/api';
 
-const ManageNews = () => {
+const ManageNews = ({ user }) => {
+    const navigate = useNavigate();
     const [news, setNews] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [message, setMessage] = useState('');
+    const [error, setError] = useState('');
     const [editingNews, setEditingNews] = useState(null);
+    const [formData, setFormData] = useState({
+        title: '',
+        category: 'Politics',
+        summary: '',
+        content: '',
+        featured: false,
+        tags: '',
+        images: []
+    });
+    const [imageFiles, setImageFiles] = useState([]);
+
+    // ✅ Check if user has permission
+    const canManageNews = user?.role === 'reporter' || user?.role === 'admin' || user?.role === 'super_admin';
 
     useEffect(() => {
+        if (!canManageNews) {
+            navigate('/');
+            return;
+        }
         fetchNews();
-    }, []);
+    }, [user]);
 
     const fetchNews = async () => {
         try {
@@ -19,138 +37,177 @@ const ManageNews = () => {
             if (response.success) {
                 setNews(response.data);
             } else {
-                setMessage('❌ Failed to load news');
+                setError('Failed to fetch news');
             }
-        } catch (error) {
-            console.error('Error fetching news:', error);
-            setMessage('❌ Error loading news');
+        } catch (err) {
+            console.error('Error fetching news:', err);
+            setError('Error loading news');
         } finally {
             setLoading(false);
         }
     };
 
-    const handleDelete = async (id, title) => {
-        if (!window.confirm(`Are you sure you want to delete "${title}"?`)) return;
-        
+    const handleInputChange = (e) => {
+        const { name, value, type, checked } = e.target;
+        setFormData({
+            ...formData,
+            [name]: type === 'checkbox' ? checked : value
+        });
+    };
+
+    const handleImageChange = (e) => {
+        const files = Array.from(e.target.files);
+        setImageFiles(files);
+    };
+
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        setError('');
+
+        if (!formData.title || !formData.category || !formData.summary || !formData.content) {
+            setError('Please fill in all required fields');
+            return;
+        }
+
         try {
-            const response = await adminAPI.deleteNews(id);
-            if (response.success) {
-                setMessage('✅ News deleted successfully!');
-                fetchNews();
-                setTimeout(() => setMessage(''), 3000);
+            const form = new FormData();
+            form.append('title', formData.title);
+            form.append('category', formData.category);
+            form.append('summary', formData.summary);
+            form.append('content', formData.content);
+            form.append('featured', formData.featured);
+            form.append('tags', formData.tags);
+            
+            imageFiles.forEach(file => {
+                form.append('images', file);
+            });
+
+            let response;
+            if (editingNews) {
+                response = await adminAPI.updateNews(editingNews._id, form);
             } else {
-                setMessage('❌ ' + (response.error || 'Failed to delete'));
+                response = await adminAPI.createNews(form);
             }
-        } catch (error) {
-            console.error('Delete error:', error);
-            setMessage('❌ Error deleting news');
+
+            if (response.success) {
+                setEditingNews(null);
+                setFormData({
+                    title: '',
+                    category: 'Politics',
+                    summary: '',
+                    content: '',
+                    featured: false,
+                    tags: '',
+                    images: []
+                });
+                setImageFiles([]);
+                fetchNews();
+            } else {
+                setError(response.error || 'Failed to save news');
+            }
+        } catch (err) {
+            console.error('Error saving news:', err);
+            setError('Error saving news');
         }
     };
 
     const handleEdit = (newsItem) => {
         setEditingNews(newsItem);
-        // Scroll to edit form
-        document.getElementById('edit-form').scrollIntoView({ behavior: 'smooth' });
+        setFormData({
+            title: newsItem.title,
+            category: newsItem.category,
+            summary: newsItem.summary,
+            content: newsItem.content,
+            featured: newsItem.featured || false,
+            tags: newsItem.tags ? newsItem.tags.join(', ') : '',
+            images: []
+        });
+        setImageFiles([]);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleEditSubmit = async (e) => {
-        e.preventDefault();
-        setLoading(true);
-        setMessage('');
+    const handleDelete = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this news?')) return;
 
         try {
-            const response = await adminAPI.updateNews(editingNews._id, {
-                title: editingNews.title,
-                category: editingNews.category,
-                summary: editingNews.summary,
-                content: editingNews.content,
-                featured: editingNews.featured,
-                tags: editingNews.tags ? editingNews.tags.join(', ') : ''
-            });
-
+            const response = await adminAPI.deleteNews(id);
             if (response.success) {
-                setMessage('✅ News updated successfully!');
-                setEditingNews(null);
                 fetchNews();
-                setTimeout(() => setMessage(''), 3000);
             } else {
-                setMessage('❌ ' + (response.error || 'Failed to update'));
+                setError(response.error || 'Failed to delete news');
             }
-        } catch (error) {
-            console.error('Update error:', error);
-            setMessage('❌ Error updating news');
-        } finally {
-            setLoading(false);
+        } catch (err) {
+            console.error('Error deleting news:', err);
+            setError('Error deleting news');
         }
     };
 
-    const formatDate = (dateString) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-        });
+    // ✅ Check if user can edit/delete a specific article
+    const canEditDelete = (newsItem) => {
+        // Super Admin can edit/delete anything
+        if (user?.role === 'super_admin') return true;
+        // Admin and Reporter can only edit/delete their own articles
+        if (user?.role === 'admin' || user?.role === 'reporter') {
+            return newsItem.authorId?._id === user?.id || newsItem.authorId === user?.id;
+        }
+        return false;
     };
 
-    if (loading && news.length === 0) {
+    // ✅ Check if user can see all articles or only their own
+    const canSeeAllArticles = user?.role === 'admin' || user?.role === 'super_admin';
+
+    if (!canManageNews) {
         return (
-            <div className="loading-container">
-                <div className="spinner"></div>
-                <p>Loading news...</p>
-                <style>{`
-                    .loading-container {
-                        display: flex;
-                        flex-direction: column;
-                        align-items: center;
-                        justify-content: center;
-                        min-height: 60vh;
-                    }
-                    .spinner {
-                        width: 40px;
-                        height: 40px;
-                        border: 4px solid #e2e8f0;
-                        border-top: 4px solid #2563eb;
-                        border-radius: 50%;
-                        animation: spin 1s linear infinite;
-                    }
-                    @keyframes spin {
-                        0% { transform: rotate(0deg); }
-                        100% { transform: rotate(360deg); }
-                    }
-                `}</style>
+            <div className="container">
+                <h2>Access Denied</h2>
+                <p>You do not have permission to manage news.</p>
+            </div>
+        );
+    }
+
+    if (loading) {
+        return (
+            <div className="container">
+                <h2>Loading...</h2>
             </div>
         );
     }
 
     return (
-        <div className="manage-news">
-            <div className="manage-header">
-                <h2>📰 Manage News Articles</h2>
-                <Link to="/admin" className="create-btn">➕ Create New</Link>
-            </div>
+        <div className="manage-news-container">
+            <div className="container">
+                <h2>📰 Manage News</h2>
+                <p className="subtitle">
+                    {user?.role === 'reporter' ? 'You can only see and manage your own articles.' :
+                     user?.role === 'admin' ? 'You can see all articles but only edit/delete your own.' :
+                     'You have full access to all articles.'}
+                </p>
 
-            {message && <div className={`message ${message.includes('✅') ? 'success' : 'error'}`}>{message}</div>}
+                {error && <div className="error-message">{error}</div>}
 
-            {/* Edit Form */}
-            {editingNews && (
-                <div id="edit-form" className="edit-form">
-                    <h3>✏️ Edit Article</h3>
-                    <form onSubmit={handleEditSubmit}>
+                {/* News Form */}
+                <div className="news-form">
+                    <h3>{editingNews ? '✏️ Edit News' : '✏️ Create News'}</h3>
+                    <form onSubmit={handleSubmit}>
                         <div className="form-group">
                             <label>Title *</label>
                             <input
                                 type="text"
-                                value={editingNews.title || ''}
-                                onChange={(e) => setEditingNews({...editingNews, title: e.target.value})}
+                                name="title"
+                                value={formData.title}
+                                onChange={handleInputChange}
+                                placeholder="Enter news title"
                                 required
                             />
                         </div>
+
                         <div className="form-group">
                             <label>Category *</label>
                             <select
-                                value={editingNews.category || 'Politics'}
-                                onChange={(e) => setEditingNews({...editingNews, category: e.target.value})}
+                                name="category"
+                                value={formData.category}
+                                onChange={handleInputChange}
+                                required
                             >
                                 <option value="Politics">Politics</option>
                                 <option value="Business">Business</option>
@@ -160,206 +217,205 @@ const ManageNews = () => {
                                 <option value="Tech">Tech</option>
                             </select>
                         </div>
+
                         <div className="form-group">
                             <label>Summary *</label>
                             <textarea
-                                value={editingNews.summary || ''}
-                                onChange={(e) => setEditingNews({...editingNews, summary: e.target.value})}
-                                rows="2"
+                                name="summary"
+                                value={formData.summary}
+                                onChange={handleInputChange}
+                                placeholder="Brief summary (max 200 characters)"
                                 maxLength="200"
+                                rows="2"
                                 required
                             />
                         </div>
+
                         <div className="form-group">
                             <label>Content *</label>
                             <textarea
-                                value={editingNews.content || ''}
-                                onChange={(e) => setEditingNews({...editingNews, content: e.target.value})}
-                                rows="6"
+                                name="content"
+                                value={formData.content}
+                                onChange={handleInputChange}
+                                placeholder="Full news content"
+                                rows="8"
                                 required
                             />
                         </div>
+
                         <div className="form-group">
                             <label>Tags (comma separated)</label>
                             <input
                                 type="text"
-                                value={editingNews.tags ? editingNews.tags.join(', ') : ''}
-                                onChange={(e) => setEditingNews({...editingNews, tags: e.target.value.split(',').map(t => t.trim())})}
-                                placeholder="e.g., breaking, politics, economy"
+                                name="tags"
+                                value={formData.tags}
+                                onChange={handleInputChange}
+                                placeholder="e.g. politics, economy, elections"
                             />
                         </div>
+
+                        <div className="form-group">
+                            <label>Images</label>
+                            <input
+                                type="file"
+                                accept="image/*"
+                                multiple
+                                onChange={handleImageChange}
+                            />
+                            {imageFiles.length > 0 && (
+                                <p>{imageFiles.length} image(s) selected</p>
+                            )}
+                        </div>
+
                         <div className="form-group checkbox">
                             <label>
                                 <input
                                     type="checkbox"
-                                    checked={editingNews.featured || false}
-                                    onChange={(e) => setEditingNews({...editingNews, featured: e.target.checked})}
+                                    name="featured"
+                                    checked={formData.featured}
+                                    onChange={handleInputChange}
                                 />
-                                ⭐ Featured Story
+                                Featured News
                             </label>
                         </div>
-                        <div className="edit-actions">
-                            <button type="submit" className="save-btn" disabled={loading}>
-                                {loading ? 'Saving...' : '💾 Save Changes'}
+
+                        <div className="form-actions">
+                            <button type="submit" className="btn-primary">
+                                {editingNews ? 'Update News' : 'Create News'}
                             </button>
-                            <button type="button" className="cancel-btn" onClick={() => setEditingNews(null)}>
-                                Cancel
-                            </button>
+                            {editingNews && (
+                                <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    onClick={() => {
+                                        setEditingNews(null);
+                                        setFormData({
+                                            title: '',
+                                            category: 'Politics',
+                                            summary: '',
+                                            content: '',
+                                            featured: false,
+                                            tags: '',
+                                            images: []
+                                        });
+                                        setImageFiles([]);
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                            )}
                         </div>
                     </form>
                 </div>
-            )}
 
-            {/* News List */}
-            <div className="news-list">
-                {news.length === 0 ? (
-                    <div className="empty-state">
-                        <p>No news articles found. Create your first article!</p>
-                    </div>
-                ) : (
-                    <table className="news-table">
-                        <thead>
-                            <tr>
-                                <th>#</th>
-                                <th>Title</th>
-                                <th>Category</th>
-                                <th>Author</th>
-                                <th>Date</th>
-                                <th>Featured</th>
-                                <th>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {news.map((item, index) => (
-                                <tr key={item._id}>
-                                    <td>{index + 1}</td>
-                                    <td>
-                                        <div className="news-title">
-                                            <Link to={`/news/${item._id}`} target="_blank">
-                                                {item.title}
-                                            </Link>
-                                            {item.images && item.images.length > 0 && (
-                                                <span className="image-indicator">🖼️</span>
-                                            )}
-                                        </div>
-                                    </td>
-                                    <td><span className="category-badge">{item.category}</span></td>
-                                    <td>{item.author || 'Admin'}</td>
-                                    <td>{formatDate(item.publishedDate)}</td>
-                                    <td>
-                                        {item.featured ? (
-                                            <span className="featured-badge">⭐ Featured</span>
-                                        ) : (
-                                            <span className="not-featured">—</span>
+                {/* News List */}
+                <div className="news-list">
+                    <h3>
+                        {canSeeAllArticles ? '📋 All News Articles' : '📋 My Articles'}
+                        <span className="badge">
+                            {news.length} article{news.length !== 1 ? 's' : ''}
+                        </span>
+                    </h3>
+
+                    {news.length === 0 ? (
+                        <p>No news articles found.</p>
+                    ) : (
+                        <div className="news-grid">
+                            {news.map((item) => (
+                                <div key={item._id} className="news-card">
+                                    <div className="news-header">
+                                        <h4>{item.title}</h4>
+                                        <span className="category-badge">{item.category}</span>
+                                    </div>
+                                    <p className="news-summary">{item.summary}</p>
+                                    <div className="news-meta">
+                                        <span>By: {item.author}</span>
+                                        <span>{new Date(item.publishedDate).toLocaleDateString()}</span>
+                                    </div>
+                                    <div className="news-actions">
+                                        {canEditDelete(item) && (
+                                            <>
+                                                <button
+                                                    className="btn-edit"
+                                                    onClick={() => handleEdit(item)}
+                                                >
+                                                    ✏️ Edit
+                                                </button>
+                                                <button
+                                                    className="btn-delete"
+                                                    onClick={() => handleDelete(item._id)}
+                                                >
+                                                    🗑️ Delete
+                                                </button>
+                                            </>
                                         )}
-                                    </td>
-                                    <td>
-                                        <div className="action-buttons">
-                                            <button 
-                                                className="edit-btn"
-                                                onClick={() => handleEdit(item)}
-                                            >
-                                                ✏️ Edit
-                                            </button>
-                                            <button 
-                                                className="delete-btn"
-                                                onClick={() => handleDelete(item._id, item.title)}
-                                            >
-                                                🗑️ Delete
-                                            </button>
-                                        </div>
-                                    </td>
-                                </tr>
+                                        {!canEditDelete(item) && (
+                                            <span className="read-only-badge">🔒 Read Only</span>
+                                        )}
+                                        {item.featured && (
+                                            <span className="featured-badge">⭐ Featured</span>
+                                        )}
+                                    </div>
+                                </div>
                             ))}
-                        </tbody>
-                    </table>
-                )}
+                        </div>
+                    )}
+                </div>
             </div>
 
             <style>{`
-                .manage-news {
-                    max-width: 1200px;
-                    margin: 40px auto;
+                .manage-news-container {
                     padding: 20px;
-                    background: white;
-                    border-radius: 12px;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    background: #f0f4ff;
+                    min-height: 100vh;
                 }
 
-                .manage-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
+                .container {
+                    max-width: 1200px;
+                    margin: 0 auto;
+                }
+
+                .subtitle {
+                    color: #718096;
                     margin-bottom: 20px;
+                    font-size: 0.9rem;
                 }
 
-                .manage-header h2 {
-                    color: #1a365d;
-                }
-
-                .create-btn {
-                    background: #2563eb;
-                    color: white;
-                    padding: 10px 20px;
-                    border: none;
-                    border-radius: 6px;
-                    text-decoration: none;
-                    font-weight: 600;
-                    transition: background 0.3s;
-                }
-
-                .create-btn:hover {
-                    background: #1a365d;
-                    color: white;
-                }
-
-                .message {
-                    padding: 12px 15px;
-                    border-radius: 6px;
-                    margin-bottom: 20px;
-                    font-weight: 500;
-                }
-
-                .message.success {
-                    background: #c6f6d5;
-                    color: #276749;
-                    border: 1px solid #9ae6b4;
-                }
-
-                .message.error {
+                .error-message {
                     background: #fed7d7;
                     color: #c53030;
-                    border: 1px solid #feb2b2;
-                }
-
-                .edit-form {
-                    background: #f7fafc;
-                    padding: 25px;
+                    padding: 12px;
                     border-radius: 8px;
-                    margin-bottom: 30px;
-                    border: 2px solid #e2e8f0;
+                    margin-bottom: 20px;
                 }
 
-                .edit-form h3 {
+                .news-form {
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    margin-bottom: 30px;
+                }
+
+                .news-form h3 {
+                    margin-bottom: 20px;
                     color: #1a365d;
-                    margin-bottom: 15px;
                 }
 
                 .form-group {
-                    margin-bottom: 15px;
+                    margin-bottom: 16px;
                 }
 
                 .form-group label {
                     display: block;
                     font-weight: 600;
-                    color: #2d3748;
                     margin-bottom: 5px;
-                    font-size: 0.9rem;
+                    color: #2d3748;
                 }
 
                 .form-group input,
-                .form-group textarea,
-                .form-group select {
+                .form-group select,
+                .form-group textarea {
                     width: 100%;
                     padding: 10px;
                     border: 2px solid #e2e8f0;
@@ -369,16 +425,21 @@ const ManageNews = () => {
                 }
 
                 .form-group input:focus,
-                .form-group textarea:focus,
-                .form-group select:focus {
+                .form-group select:focus,
+                .form-group textarea:focus {
                     outline: none;
                     border-color: #2563eb;
+                }
+
+                .form-group.checkbox {
+                    display: flex;
+                    align-items: center;
                 }
 
                 .form-group.checkbox label {
                     display: flex;
                     align-items: center;
-                    gap: 10px;
+                    gap: 8px;
                     cursor: pointer;
                 }
 
@@ -386,167 +447,188 @@ const ManageNews = () => {
                     width: auto;
                 }
 
-                .edit-actions {
+                .form-actions {
                     display: flex;
                     gap: 10px;
                     margin-top: 10px;
                 }
 
-                .save-btn {
-                    background: #38a169;
+                .btn-primary {
+                    padding: 12px 24px;
+                    background: linear-gradient(135deg, #1a365d, #2563eb);
                     color: white;
-                    padding: 10px 24px;
                     border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
+                    border-radius: 8px;
                     font-weight: 600;
-                    transition: background 0.3s;
+                    cursor: pointer;
+                    transition: opacity 0.3s;
                 }
 
-                .save-btn:hover:not(:disabled) {
-                    background: #2f855a;
+                .btn-primary:hover {
+                    opacity: 0.9;
                 }
 
-                .save-btn:disabled {
-                    opacity: 0.6;
-                    cursor: not-allowed;
-                }
-
-                .cancel-btn {
-                    background: #718096;
-                    color: white;
-                    padding: 10px 24px;
+                .btn-secondary {
+                    padding: 12px 24px;
+                    background: #e2e8f0;
+                    color: #2d3748;
                     border: none;
-                    border-radius: 6px;
-                    cursor: pointer;
+                    border-radius: 8px;
                     font-weight: 600;
-                    transition: background 0.3s;
+                    cursor: pointer;
                 }
 
-                .cancel-btn:hover {
-                    background: #4a5568;
+                .btn-secondary:hover {
+                    background: #cbd5e0;
                 }
 
                 .news-list {
-                    overflow-x: auto;
+                    background: white;
+                    padding: 30px;
+                    border-radius: 12px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
                 }
 
-                .news-table {
-                    width: 100%;
-                    border-collapse: collapse;
-                }
-
-                .news-table th {
-                    background: #f7fafc;
-                    padding: 12px;
-                    text-align: left;
-                    font-weight: 600;
-                    color: #2d3748;
-                    border-bottom: 2px solid #e2e8f0;
-                }
-
-                .news-table td {
-                    padding: 12px;
-                    border-bottom: 1px solid #e2e8f0;
-                }
-
-                .news-table tr:hover {
-                    background: #f7fafc;
-                }
-
-                .news-title {
+                .news-list h3 {
                     display: flex;
+                    justify-content: space-between;
                     align-items: center;
-                    gap: 8px;
-                }
-
-                .news-title a {
+                    margin-bottom: 20px;
                     color: #1a365d;
-                    text-decoration: none;
-                    font-weight: 500;
                 }
 
-                .news-title a:hover {
-                    color: #2563eb;
-                    text-decoration: underline;
-                }
-
-                .image-indicator {
+                .badge {
+                    background: #e2e8f0;
+                    padding: 4px 12px;
+                    border-radius: 20px;
                     font-size: 0.8rem;
+                    font-weight: 600;
+                }
+
+                .news-grid {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 16px;
+                }
+
+                .news-card {
+                    border: 1px solid #e2e8f0;
+                    padding: 16px;
+                    border-radius: 8px;
+                    transition: box-shadow 0.3s;
+                }
+
+                .news-card:hover {
+                    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+                }
+
+                .news-header {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: flex-start;
+                    margin-bottom: 8px;
+                }
+
+                .news-header h4 {
+                    color: #1a365d;
+                    font-size: 1.1rem;
+                    margin: 0;
+                    flex: 1;
                 }
 
                 .category-badge {
-                    display: inline-block;
-                    background: #e2e8f0;
+                    background: #ebf8ff;
+                    color: #2b6cb0;
                     padding: 2px 10px;
                     border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
+                    white-space: nowrap;
+                    margin-left: 10px;
+                }
+
+                .news-summary {
+                    color: #4a5568;
+                    margin-bottom: 8px;
+                    font-size: 0.9rem;
+                }
+
+                .news-meta {
+                    display: flex;
+                    gap: 16px;
+                    color: #718096;
                     font-size: 0.8rem;
-                    color: #2d3748;
+                    margin-bottom: 10px;
+                }
+
+                .news-actions {
+                    display: flex;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                    align-items: center;
+                }
+
+                .btn-edit {
+                    padding: 6px 14px;
+                    background: #ebf8ff;
+                    color: #2b6cb0;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    transition: background 0.3s;
+                }
+
+                .btn-edit:hover {
+                    background: #bee3f8;
+                }
+
+                .btn-delete {
+                    padding: 6px 14px;
+                    background: #fff5f5;
+                    color: #e53e3e;
+                    border: none;
+                    border-radius: 6px;
+                    cursor: pointer;
+                    font-size: 0.8rem;
+                    transition: background 0.3s;
+                }
+
+                .btn-delete:hover {
+                    background: #fed7d7;
+                }
+
+                .read-only-badge {
+                    background: #e2e8f0;
+                    color: #4a5568;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
                 }
 
                 .featured-badge {
-                    display: inline-block;
                     background: #f6e05e;
-                    padding: 2px 10px;
-                    border-radius: 12px;
-                    font-size: 0.8rem;
                     color: #744210;
-                }
-
-                .not-featured {
-                    color: #a0aec0;
-                }
-
-                .action-buttons {
-                    display: flex;
-                    gap: 8px;
-                }
-
-                .edit-btn {
-                    background: #4299e1;
-                    color: white;
-                    border: none;
-                    padding: 6px 12px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.85rem;
-                    transition: background 0.3s;
-                }
-
-                .edit-btn:hover {
-                    background: #3182ce;
-                }
-
-                .delete-btn {
-                    background: #fc8181;
-                    color: white;
-                    border: none;
-                    padding: 6px 12px;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-size: 0.85rem;
-                    transition: background 0.3s;
-                }
-
-                .delete-btn:hover {
-                    background: #e53e3e;
-                }
-
-                .empty-state {
-                    text-align: center;
-                    padding: 60px 20px;
-                    color: #718096;
+                    padding: 4px 10px;
+                    border-radius: 12px;
+                    font-size: 0.75rem;
+                    font-weight: 600;
                 }
 
                 @media (max-width: 768px) {
-                    .manage-news {
-                        padding: 10px;
-                    }
-                    .news-table {
-                        font-size: 0.85rem;
-                    }
-                    .action-buttons {
+                    .news-header {
                         flex-direction: column;
+                        gap: 8px;
+                    }
+                    
+                    .form-actions {
+                        flex-direction: column;
+                    }
+                    
+                    .btn-primary,
+                    .btn-secondary {
+                        width: 100%;
                     }
                 }
             `}</style>

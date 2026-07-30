@@ -110,6 +110,25 @@ const isAdmin = async (req, res, next) => {
     }
 };
 
+// ========== REPORTER MIDDLEWARE ==========
+const isReporter = async (req, res, next) => {
+    try {
+        const allowedRoles = ['reporter', 'admin', 'super_admin'];
+        if (!allowedRoles.includes(req.user.role)) {
+            return res.status(403).json({
+                success: false,
+                error: 'Reporter access required'
+            });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
 // ========== SUPER ADMIN MIDDLEWARE ==========
 const isSuperAdmin = async (req, res, next) => {
     try {
@@ -141,10 +160,10 @@ router.post('/login', async (req, res) => {
             });
         }
 
-        if (user.role !== 'admin' && user.role !== 'super_admin') {
+        if (user.role !== 'admin' && user.role !== 'super_admin' && user.role !== 'reporter') {
             return res.status(403).json({
                 success: false,
-                error: 'Admin access required'
+                error: 'Admin/Reporter access required'
             });
         }
 
@@ -182,9 +201,11 @@ router.post('/login', async (req, res) => {
 });
 
 // ========== CREATE NEWS ==========
-router.post('/news', auth, isAdmin, upload.array('images', 10), async (req, res) => {
+// ✅ Reporters, Admins, and Super Admins can create news
+router.post('/news', auth, isReporter, upload.array('images', 10), async (req, res) => {
     console.log('📝 POST /api/admin/news');
     console.log('📝 User:', req.user?.email);
+    console.log('📝 Role:', req.user?.role);
     console.log('📝 Body:', req.body);
     console.log('📝 Files:', req.files ? req.files.length : 0);
 
@@ -198,7 +219,6 @@ router.post('/news', auth, isAdmin, upload.array('images', 10), async (req, res)
             });
         }
 
-        // ✅ Use the correct base URL for images
         const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
         console.log('📸 Base URL for images:', baseUrl);
 
@@ -248,7 +268,9 @@ router.post('/news', auth, isAdmin, upload.array('images', 10), async (req, res)
 });
 
 // ========== UPDATE NEWS ==========
-router.put('/news/:id', auth, isAdmin, upload.array('images', 10), async (req, res) => {
+// ✅ Only Admins and Super Admins can update (and only their own articles)
+// ✅ Reporters can update their own articles
+router.put('/news/:id', auth, isReporter, upload.array('images', 10), async (req, res) => {
     try {
         const { title, category, summary, content, featured, tags } = req.body;
         const news = await News.findById(req.params.id);
@@ -257,6 +279,20 @@ router.put('/news/:id', auth, isAdmin, upload.array('images', 10), async (req, r
             return res.status(404).json({
                 success: false,
                 error: 'News not found'
+            });
+        }
+
+        // ✅ Check if user can edit this article
+        const isAuthor = news.authorId.toString() === req.user._id.toString();
+        const isSuperAdmin = req.user.role === 'super_admin';
+        const isAdminOrReporter = req.user.role === 'admin' || req.user.role === 'reporter';
+
+        // Super Admin can edit anything
+        // Admin/Reporter can only edit their own articles
+        if (!isSuperAdmin && !isAuthor) {
+            return res.status(403).json({
+                success: false,
+                error: 'You can only edit your own articles'
             });
         }
 
@@ -292,15 +328,36 @@ router.put('/news/:id', auth, isAdmin, upload.array('images', 10), async (req, r
 });
 
 // ========== DELETE NEWS ==========
-router.delete('/news/:id', auth, isAdmin, async (req, res) => {
+// ✅ Super Admin can delete any article
+// ✅ Admin can delete only their own articles
+// ✅ Reporter can delete only their own articles
+router.delete('/news/:id', auth, isReporter, async (req, res) => {
     try {
-        const news = await News.findByIdAndDelete(req.params.id);
+        const news = await News.findById(req.params.id);
+        
         if (!news) {
             return res.status(404).json({
                 success: false,
                 error: 'News not found'
             });
         }
+
+        // ✅ Check permissions
+        const isAuthor = news.authorId.toString() === req.user._id.toString();
+        const isSuperAdmin = req.user.role === 'super_admin';
+        const isAdminOrReporter = req.user.role === 'admin' || req.user.role === 'reporter';
+
+        // Super Admin can delete anything
+        // Admin/Reporter can only delete their own articles
+        if (!isSuperAdmin && !isAuthor) {
+            return res.status(403).json({
+                success: false,
+                error: 'You can only delete your own articles'
+            });
+        }
+
+        await News.findByIdAndDelete(req.params.id);
+        
         res.json({
             success: true,
             message: 'News deleted successfully'
@@ -314,12 +371,22 @@ router.delete('/news/:id', auth, isAdmin, async (req, res) => {
     }
 });
 
-// ========== GET ALL NEWS (Admin) ==========
-router.get('/news', auth, isAdmin, async (req, res) => {
+// ========== GET ALL NEWS (Admin/Reporter) ==========
+// ✅ Super Admin and Admin can see all articles
+// ✅ Reporter can only see their own articles
+router.get('/news', auth, isReporter, async (req, res) => {
     try {
-        const news = await News.find()
+        let query = {};
+        
+        // ✅ Reporters only see their own articles
+        if (req.user.role === 'reporter') {
+            query.authorId = req.user._id;
+        }
+        // ✅ Admins and Super Admins see all articles (no filter)
+
+        const news = await News.find(query)
             .sort({ publishedDate: -1 })
-            .populate('authorId', 'name email');
+            .populate('authorId', 'name email username');
 
         res.json({
             success: true,
@@ -335,7 +402,7 @@ router.get('/news', auth, isAdmin, async (req, res) => {
 });
 
 // ========== GET ALL USERS ==========
-router.get('/users', auth, isAdmin, async (req, res) => {
+router.get('/users', auth, isSuperAdmin, async (req, res) => {
     try {
         const users = await User.find()
             .select('-password -resetPasswordToken -resetPasswordExpires')
@@ -509,18 +576,26 @@ router.delete('/users/:id', auth, isSuperAdmin, async (req, res) => {
 });
 
 // ========== GET ADMIN STATS ==========
-router.get('/stats', auth, isAdmin, async (req, res) => {
+router.get('/stats', auth, isReporter, async (req, res) => {
     try {
-        const totalNews = await News.countDocuments();
+        let newsQuery = {};
+        
+        // ✅ Reporters only see stats for their own articles
+        if (req.user.role === 'reporter') {
+            newsQuery.authorId = req.user._id;
+        }
+        
+        const totalNews = await News.countDocuments(newsQuery);
         const totalUsers = await User.countDocuments();
-        const featuredNews = await News.countDocuments({ featured: true });
+        const featuredNews = await News.countDocuments({ ...newsQuery, featured: true });
 
         res.json({
             success: true,
             data: {
                 totalNews,
                 totalUsers,
-                featuredNews
+                featuredNews,
+                role: req.user.role
             }
         });
     } catch (error) {
