@@ -1,7 +1,15 @@
-// routes/og.js
 const express = require('express');
 const router = express.Router();
 const News = require('../models/News');
+
+// ✅ Test route to verify OG routes are working
+router.get('/test', (req, res) => {
+    res.json({ 
+        success: true, 
+        message: '✅ OG routes are working!',
+        timestamp: new Date().toISOString()
+    });
+});
 
 // ✅ Get article for social media sharing
 router.get('/news/:id', async (req, res) => {
@@ -9,20 +17,52 @@ router.get('/news/:id', async (req, res) => {
         const news = await News.findById(req.params.id);
         
         if (!news) {
-            // If no article found, redirect to homepage
-            return res.redirect('https://www.godaygacalo.com');
+            // If no article found, show a 404 page with OG tags
+            return res.status(404).send(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Article Not Found - Godey Gacalo News</title>
+                    <meta property="og:title" content="Article Not Found" />
+                    <meta property="og:description" content="The article you're looking for doesn't exist." />
+                    <meta property="og:image" content="https://www.godaygacalo.com/images/og-default.jpg" />
+                    <meta property="og:url" content="https://www.godaygacalo.com/" />
+                    <meta name="twitter:card" content="summary_large_image" />
+                </head>
+                <body>
+                    <h1>Article Not Found</h1>
+                    <p>The article you're looking for doesn't exist.</p>
+                    <a href="https://www.godaygacalo.com">Go to Homepage</a>
+                </body>
+                </html>
+            `);
         }
 
-        // Get the first image or use default
+        // ✅ Get the first image or use default
         let imageUrl = 'https://www.godaygacalo.com/images/og-default.jpg';
+        
         if (news.images && news.images.length > 0) {
+            let img = news.images[0];
+            
             // If image is stored as /uploads/filename.jpg
-            if (news.images[0].startsWith('/uploads')) {
-                imageUrl = `https://goday-gacalo-news.onrender.com${news.images[0]}`;
-            } else {
-                imageUrl = news.images[0];
+            if (img.startsWith('/uploads')) {
+                imageUrl = `https://goday-gacalo-news.onrender.com${img}`;
+            }
+            // If it's already a full URL
+            else if (img.startsWith('http')) {
+                // Replace localhost with production URL and ensure HTTPS
+                imageUrl = img.replace('http://localhost:5000', 'https://goday-gacalo-news.onrender.com');
+                imageUrl = imageUrl.replace('http://', 'https://');
+            }
+            // If it's just a filename
+            else {
+                imageUrl = `https://goday-gacalo-news.onrender.com/uploads/${img}`;
             }
         }
+
+        // ✅ Log for debugging
+        console.log('📸 OG Image URL:', imageUrl);
+        console.log('📰 OG Article:', news.title);
 
         // Clean up content for description
         const description = news.summary || news.content.substring(0, 150) + '...';
@@ -44,6 +84,7 @@ router.get('/news/:id', async (req, res) => {
     <meta property="og:image" content="${imageUrl}" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:site_name" content="Godey Gacalo News" />
     <meta property="article:published_time" content="${news.publishedDate}" />
     <meta property="article:author" content="${escapeHtml(news.author || 'Godey Gacalo News')}" />
@@ -63,47 +104,96 @@ router.get('/news/:id', async (req, res) => {
     
     <!-- Fallback if redirect doesn't work -->
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: Arial, sans-serif; 
-            max-width: 800px; 
-            margin: 50px auto; 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #f0f4ff;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             padding: 20px;
+        }
+        .card { 
+            background: white;
+            max-width: 800px;
+            width: 100%;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.15);
+        }
+        .card-image {
+            width: 100%;
+            height: 400px;
+            object-fit: cover;
+            background: #e2e8f0;
+        }
+        .card-content {
+            padding: 30px;
+        }
+        .card-title {
+            font-size: 1.8rem;
+            color: #1a365d;
+            margin-bottom: 12px;
+            line-height: 1.3;
+        }
+        .card-description {
+            color: #4a5568;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+        .card-meta {
+            color: #718096;
+            font-size: 0.9rem;
+            margin-bottom: 20px;
+        }
+        .card-button {
+            display: inline-block;
+            background: #2563eb;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        .card-button:hover {
+            background: #1a365d;
+        }
+        .card-footer {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            color: #a0aec0;
+            font-size: 0.85rem;
             text-align: center;
         }
-        img { max-width: 100%; border-radius: 10px; }
-        .card { 
-            background: #f0f4ff; 
-            padding: 30px; 
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(37, 99, 235, 0.1);
-        }
-        .meta { color: #718096; font-size: 0.9rem; }
-        .read-more { 
-            display: inline-block; 
-            background: #2563eb; 
-            color: white; 
-            padding: 12px 24px; 
-            border-radius: 8px; 
-            text-decoration: none;
-            margin-top: 15px;
+        @media (max-width: 640px) {
+            .card-image { height: 250px; }
+            .card-title { font-size: 1.4rem; }
+            .card-content { padding: 20px; }
         }
     </style>
 </head>
 <body>
     <div class="card">
-        <img src="${imageUrl}" alt="${escapeHtml(news.title)}" />
-        <h1>${escapeHtml(news.title)}</h1>
-        <p>${escapeHtml(description)}</p>
-        <div class="meta">
-            📅 ${new Date(news.publishedDate).toLocaleDateString()} 
-            • 📝 ${escapeHtml(news.author || 'Godey Gacalo News')}
+        <img src="${imageUrl}" alt="${escapeHtml(news.title)}" class="card-image" />
+        <div class="card-content">
+            <h1 class="card-title">${escapeHtml(news.title)}</h1>
+            <p class="card-description">${escapeHtml(description)}</p>
+            <div class="card-meta">
+                📅 ${new Date(news.publishedDate).toLocaleDateString()} 
+                • 📝 ${escapeHtml(news.author || 'Godey Gacalo News')}
+                • 📂 ${escapeHtml(news.category)}
+            </div>
+            <a href="https://www.godaygacalo.com/#/news/${news._id}" class="card-button">
+                📰 Read Full Article
+            </a>
+            <div class="card-footer">
+                Godey Gacalo News • Your trusted source
+            </div>
         </div>
-        <a href="https://www.godaygacalo.com/#/news/${news._id}" class="read-more">
-            📰 Read Full Article
-        </a>
-        <p style="margin-top: 20px; color: #a0aec0; font-size: 0.8rem;">
-            Godey Gacalo News • Your trusted source
-        </p>
     </div>
 </body>
 </html>
@@ -118,24 +208,7 @@ router.get('/news/:id', async (req, res) => {
     }
 });
 
-// Helper function to escape HTML
-function escapeHtml(text) {
-    if (!text) return '';
-    const div = document?.createElement?.('div') || { textContent: '' };
-    if (div.textContent !== undefined) {
-        div.textContent = text;
-        return div.innerHTML;
-    }
-    // Fallback for Node.js
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-// Simple escape for Node.js
+// ✅ Helper function to escape HTML (defined ONCE)
 function escapeHtml(text) {
     if (!text) return '';
     return String(text)
