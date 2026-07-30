@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Godey Gacalo News</title>
+    
+    <!-- ✅ Default OG tags (will be replaced by backend) -->
+    <meta property="og:title" content="Godey Gacalo News" />
+    <meta property="og:description" content="Latest news and updates from Godey, Somalia" />
+    <meta property="og:image" content="https://www.godaygacalo.com/images/og-default.jpg" />
+    <meta property="og:url" content="https://www.godaygacalo.com/" />
+    <meta name="twitter:card" content="summary_large_image" />
+    
+    <script>
+        // ✅ Get the ID from the URL hash
+        // Example: https://www.godaygacalo.com/og.html#news/123456789
+        const hash = window.location.hash;
+        const id = hash.replace('#news/', '');
+        
+        console.log('🔗 OG Hash:', hash);
+        console.log('📰 Article ID:', id);
+        
+        // If there's an ID, redirect to backend OG route
+        if (id && id.length > 0) {
+            // Redirect to backend OG route
+            const backendUrl = `https://goday-gacalo-news.onrender.com/og/news/${id}`;
+            console.log('🔄 Redirecting to:', backendUrl);
+            window.location.href = backendUrl;
+        } else {
+            // If no ID, redirect to homepage
+            console.log('🏠 No ID found, redirecting to homepage');
+            window.location.href = '/';
+        }
+    </script>
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background: #f0f4ff;
+        }
+        .loader {
+            text-align: center;
+            padding: 40px;
+        }
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top: 4px solid #2563eb;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loader p {
+            color: #4a5568;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="loader">
+        <div class="spinner"></div>
+        <p>Loading article...</p>
+    </div>
+</body>
+</html>
