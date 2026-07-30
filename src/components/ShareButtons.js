@@ -21,12 +21,12 @@ const ShareButtons = ({ article }) => {
     const summary = article.summary || article.content.substring(0, 150);
 
     // Share handlers
-    const shareOnWhatsApp = () => {
-        window.open(
-            `https://wa.me/?text=${encodeURIComponent(`${title}\n\n${summary}\n\n📰 ${shareUrl}`)}`,
-            '_blank'
-        );
-    };
+const shareOnWhatsApp = () => {
+    window.open(
+        `https://wa.me/?text=${encodeURIComponent(`${title}\n\n${summary}\n\n📰 ${shareUrl}`)}`,
+        '_blank'
+    );
+};
 
     const shareOnFacebook = () => {
         window.open(
