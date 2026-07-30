@@ -4,58 +4,42 @@ const News = require('../models/News');
 const User = require('../models/User');
 const jwt = require('jsonwebtoken');
 const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('cloudinary').v2;
 const path = require('path');
 const fs = require('fs');
 
-// ========== FILE UPLOAD ==========
-// Check multiple possible uploads locations
-const possibleUploadDirs = [
-    './uploads',
-    './backend/uploads',
-    '../uploads'
-];
-
-let uploadDir = './uploads';
-for (const dir of possibleUploadDirs) {
-    if (fs.existsSync(dir)) {
-        uploadDir = dir;
-        console.log(`📁 Uploads directory found at: ${uploadDir}`);
-        break;
-    }
-}
-
-// Create uploads directory if it doesn't exist
-if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir, { recursive: true });
-    console.log(`📁 Created uploads directory at: ${uploadDir}`);
-}
-
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + path.extname(file.originalname));
-    }
+// ========== CLOUDINARY CONFIGURATION ==========
+cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET
 });
 
-const fileFilter = (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|gif|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
+console.log('📸 Cloudinary configured for:', process.env.CLOUDINARY_CLOUD_NAME);
 
-    if (mimetype && extname) {
-        return cb(null, true);
-    } else {
-        cb(new Error('Only images are allowed'));
+// ========== CLOUDINARY STORAGE ==========
+const storage = new CloudinaryStorage({
+    cloudinary: cloudinary,
+    params: {
+        folder: 'godey-news',
+        allowed_formats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        transformation: [{ width: 1200, height: 800, crop: 'limit' }]
     }
-};
+});
 
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5 * 1024 * 1024 },
-    fileFilter: fileFilter
+    fileFilter: (req, file, cb) => {
+        const allowedTypes = /jpeg|jpg|png|gif|webp/;
+        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+        const mimetype = allowedTypes.test(file.mimetype);
+        if (mimetype && extname) {
+            return cb(null, true);
+        }
+        cb(new Error('Only images are allowed'));
+    }
 });
 
 // ========== AUTHENTICATION MIDDLEWARE ==========
@@ -88,24 +72,6 @@ const auth = async (req, res, next) => {
         res.status(401).json({
             success: false,
             error: 'Please authenticate'
-        });
-    }
-};
-
-// ========== ADMIN MIDDLEWARE ==========
-const isAdmin = async (req, res, next) => {
-    try {
-        if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
-            return res.status(403).json({
-                success: false,
-                error: 'Admin access required'
-            });
-        }
-        next();
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            error: error.message
         });
     }
 };
@@ -219,12 +185,11 @@ router.post('/news', auth, isReporter, upload.array('images', 10), async (req, r
             });
         }
 
-        const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
-        console.log('📸 Base URL for images:', baseUrl);
-
+        // ✅ Get Cloudinary URLs from uploaded files
         let imageUrls = [];
         if (req.files && req.files.length > 0) {
-            imageUrls = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+            imageUrls = req.files.map(file => file.path); // Cloudinary secure URL
+            console.log('📸 Cloudinary URLs:', imageUrls);
         }
 
         const authorName = req.user.name || 'Godey Gacalo News';
@@ -255,7 +220,7 @@ router.post('/news', auth, isReporter, upload.array('images', 10), async (req, r
 
         res.status(201).json({
             success: true,
-            message: 'News created successfully!',
+            message: `News created successfully with ${imageUrls.length} images!`,
             data: newNews
         });
     } catch (error) {
@@ -285,7 +250,6 @@ router.put('/news/:id', auth, isReporter, upload.array('images', 10), async (req
         // ✅ Check if user can edit this article
         const isAuthor = news.authorId.toString() === req.user._id.toString();
         const isSuperAdmin = req.user.role === 'super_admin';
-        const isAdminOrReporter = req.user.role === 'admin' || req.user.role === 'reporter';
 
         // Super Admin can edit anything
         // Admin/Reporter can only edit their own articles
@@ -305,10 +269,11 @@ router.put('/news/:id', auth, isReporter, upload.array('images', 10), async (req
             news.tags = typeof tags === 'string' ? tags.split(',').map(t => t.trim()).filter(Boolean) : tags;
         }
 
+        // ✅ Add new images from Cloudinary
         if (req.files && req.files.length > 0) {
-            const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
-            const newImages = req.files.map(file => `${baseUrl}/uploads/${file.filename}`);
+            const newImages = req.files.map(file => file.path);
             news.images = [...news.images, ...newImages];
+            console.log('📸 Added new Cloudinary images:', newImages);
         }
 
         await news.save();
@@ -345,7 +310,6 @@ router.delete('/news/:id', auth, isReporter, async (req, res) => {
         // ✅ Check permissions
         const isAuthor = news.authorId.toString() === req.user._id.toString();
         const isSuperAdmin = req.user.role === 'super_admin';
-        const isAdminOrReporter = req.user.role === 'admin' || req.user.role === 'reporter';
 
         // Super Admin can delete anything
         // Admin/Reporter can only delete their own articles
@@ -354,6 +318,23 @@ router.delete('/news/:id', auth, isReporter, async (req, res) => {
                 success: false,
                 error: 'You can only delete your own articles'
             });
+        }
+
+        // ✅ Delete images from Cloudinary
+        if (news.images && news.images.length > 0) {
+            for (const imageUrl of news.images) {
+                try {
+                    // Extract public ID from Cloudinary URL
+                    // Example: https://res.cloudinary.com/cloud_name/image/upload/v1234567890/godey-news/filename.jpg
+                    const parts = imageUrl.split('/');
+                    const filename = parts[parts.length - 1];
+                    const publicId = `godey-news/${filename.split('.')[0]}`;
+                    await cloudinary.uploader.destroy(publicId);
+                    console.log('🗑️ Deleted from Cloudinary:', publicId);
+                } catch (err) {
+                    console.error('Error deleting image from Cloudinary:', err);
+                }
+            }
         }
 
         await News.findByIdAndDelete(req.params.id);
