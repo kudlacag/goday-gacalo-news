@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { adminAPI } from '../api/api';
+import { adminAPI, API_URL } from '../api/api';
 
-const ManageNews = ({ user }) => {
+const ManageNews = ({ user: propUser }) => {
     const navigate = useNavigate();
-    const [news, setNews] = useState([]);
+    const [user, setUser] = useState(propUser || null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    const [news, setNews] = useState([]);
     const [editingNews, setEditingNews] = useState(null);
     const [formData, setFormData] = useState({
         title: '',
@@ -19,24 +20,55 @@ const ManageNews = ({ user }) => {
     });
     const [imageFiles, setImageFiles] = useState([]);
 
-    // ✅ Check if user has permission - Allow super_admin, admin, and reporter
+    // ✅ Check if user has permission
     const canManageNews = user?.role === 'super_admin' || user?.role === 'admin' || user?.role === 'reporter';
 
+    // ✅ Fetch user if not provided as prop
     useEffect(() => {
-        // ✅ If no user, check localStorage for token
-        const token = localStorage.getItem('token');
-        
-        if (!user && !token) {
-            navigate('/login');
-            return;
-        }
+        const fetchUser = async () => {
+            try {
+                const token = localStorage.getItem('token');
+                if (!token) {
+                    navigate('/login');
+                    return;
+                }
 
-        if (!canManageNews) {
-            navigate('/');
-            return;
-        }
+                // If user already provided via prop, use it
+                if (propUser) {
+                    setUser(propUser);
+                    return;
+                }
 
-        fetchNews();
+                // Otherwise fetch user
+                const response = await fetch(`${API_URL}/api/auth/me`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                const data = await response.json();
+                
+                if (data.success) {
+                    setUser(data.user);
+                } else {
+                    localStorage.removeItem('token');
+                    navigate('/login');
+                }
+            } catch (error) {
+                console.error('Error fetching user:', error);
+                navigate('/login');
+            }
+        };
+
+        fetchUser();
+    }, [propUser]);
+
+    // ✅ Fetch news once user is available
+    useEffect(() => {
+        if (user) {
+            if (!canManageNews) {
+                navigate('/');
+                return;
+            }
+            fetchNews();
+        }
     }, [user]);
 
     const fetchNews = async () => {
@@ -153,11 +185,13 @@ const ManageNews = ({ user }) => {
 
     // ✅ Check if user can edit/delete a specific article
     const canEditDelete = (newsItem) => {
+        if (!user) return false;
         // Super Admin can edit/delete anything
-        if (user?.role === 'super_admin') return true;
+        if (user.role === 'super_admin') return true;
         // Admin and Reporter can only edit/delete their own articles
-        if (user?.role === 'admin' || user?.role === 'reporter') {
-            return newsItem.authorId?._id === user?.id || newsItem.authorId === user?.id;
+        if (user.role === 'admin' || user.role === 'reporter') {
+            const authorId = newsItem.authorId?._id || newsItem.authorId;
+            return authorId === user.id || authorId === user._id;
         }
         return false;
     };
@@ -165,8 +199,19 @@ const ManageNews = ({ user }) => {
     // ✅ Check if user can see all articles or only their own
     const canSeeAllArticles = user?.role === 'admin' || user?.role === 'super_admin';
 
-    // ✅ If not logged in or no permission
-    if (!user && !localStorage.getItem('token')) {
+    // ✅ Show loading while checking user
+    if (!user && localStorage.getItem('token')) {
+        return (
+            <div className="manage-news-container">
+                <div className="container">
+                    <h2>Loading...</h2>
+                </div>
+            </div>
+        );
+    }
+
+    // ✅ If not logged in
+    if (!localStorage.getItem('token')) {
         return (
             <div className="manage-news-container">
                 <div className="container">
@@ -178,6 +223,7 @@ const ManageNews = ({ user }) => {
         );
     }
 
+    // ✅ If no permission
     if (!canManageNews) {
         return (
             <div className="manage-news-container">
@@ -194,7 +240,7 @@ const ManageNews = ({ user }) => {
         return (
             <div className="manage-news-container">
                 <div className="container">
-                    <h2>Loading...</h2>
+                    <h2>Loading news...</h2>
                 </div>
             </div>
         );
@@ -205,9 +251,9 @@ const ManageNews = ({ user }) => {
             <div className="container">
                 <h2>📰 Manage News</h2>
                 <p className="subtitle">
-                    {user?.role === 'reporter' ? '👤 Reporter - You can only see and manage your own articles.' :
-                     user?.role === 'admin' ? '👤 Admin - You can see all articles but only edit/delete your own.' :
-                     '👑 Super Admin - You have full access to all articles.'}
+                    {user?.role === 'reporter' && '👤 Reporter - You can only see and manage your own articles.'}
+                    {user?.role === 'admin' && '👤 Admin - You can see all articles but only edit/delete your own.'}
+                    {user?.role === 'super_admin' && '👑 Super Admin - You have full access to all articles.'}
                 </p>
 
                 {error && <div className="error-message">{error}</div>}
