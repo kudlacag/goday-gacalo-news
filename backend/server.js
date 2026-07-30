@@ -4,6 +4,7 @@ const cors = require('cors');
 const dotenv = require('dotenv');
 const path = require('path');
 const nodemailer = require('nodemailer');
+const fs = require('fs');
 
 dotenv.config();
 
@@ -22,7 +23,6 @@ const allowedOrigins = [
 
 app.use(cors({
     origin: function (origin, callback) {
-        // Allow requests with no origin (like mobile apps, curl requests)
         if (!origin) return callback(null, true);
         
         if (allowedOrigins.includes(origin)) {
@@ -37,10 +37,8 @@ app.use(cors({
     credentials: true
 }));
 
-// Handle preflight requests explicitly
 app.options('*', cors());
 
-// Additional CORS headers middleware
 app.use((req, res, next) => {
     const origin = req.headers.origin;
     if (allowedOrigins.includes(origin)) {
@@ -55,8 +53,35 @@ app.use((req, res, next) => {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files (for images)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// ========== SERVE UPLOADED FILES (FIXED) ==========
+// Check multiple possible uploads locations
+const uploadPaths = [
+    path.join(__dirname, 'uploads'),
+    path.join(__dirname, 'backend/uploads'),
+    path.join(__dirname, '../uploads')
+];
+
+let uploadsPath = null;
+for (const testPath of uploadPaths) {
+    if (fs.existsSync(testPath)) {
+        uploadsPath = testPath;
+        console.log(`📁 Uploads folder found at: ${uploadsPath}`);
+        break;
+    }
+}
+
+// If no uploads folder exists, create one
+if (!uploadsPath) {
+    uploadsPath = path.join(__dirname, 'uploads');
+    if (!fs.existsSync(uploadsPath)) {
+        fs.mkdirSync(uploadsPath, { recursive: true });
+        console.log(`📁 Created uploads folder at: ${uploadsPath}`);
+    }
+}
+
+// Serve the uploads folder
+app.use('/uploads', express.static(uploadsPath));
+console.log(`📸 Serving uploads from: ${uploadsPath}`);
 
 // ========== ROUTES ==========
 console.log('📡 Loading routes...');
@@ -106,7 +131,8 @@ app.get('/api/test-env', (req, res) => {
         jwtSecret: process.env.JWT_SECRET ? '✅ Set' : '❌ Not set',
         nodeEnv: process.env.NODE_ENV || 'development',
         adminEmail: process.env.ADMIN_EMAIL || 'Not set',
-        useEthereal: process.env.USE_ETHEREAL || 'Not set'
+        useEthereal: process.env.USE_ETHEREAL || 'Not set',
+        uploadsPath: uploadsPath
     });
 });
 
@@ -124,7 +150,6 @@ app.post('/api/test-email', async (req, res) => {
 
         console.log('📧 Testing email configuration...');
         
-        // Check if we should use Ethereal
         const useEthereal = process.env.USE_ETHEREAL === 'true' || !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
         
         let transporter;
@@ -134,7 +159,6 @@ app.post('/api/test-email', async (req, res) => {
         if (useEthereal) {
             console.log('📧 Using Ethereal Email for testing');
             
-            // Create a new Ethereal account
             const testAccount = await nodemailer.createTestAccount();
             console.log('📧 Ethereal Email:', testAccount.user);
             console.log('🔑 Ethereal Password:', testAccount.pass);
@@ -169,7 +193,6 @@ app.post('/api/test-email', async (req, res) => {
                 `
             };
         } else {
-            // Use Gmail
             console.log('📧 Using Gmail for testing');
             
             if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
@@ -190,7 +213,6 @@ app.post('/api/test-email', async (req, res) => {
                 }
             });
 
-            // Verify transporter connection
             try {
                 await transporter.verify();
                 console.log('✅ Email transporter verified successfully');
@@ -226,7 +248,6 @@ app.post('/api/test-email', async (req, res) => {
         console.log('✅ Test email sent successfully!');
         console.log('📧 Message ID:', info.messageId);
         
-        // Get preview URL for Ethereal
         let previewUrl = null;
         if (isEthereal) {
             previewUrl = nodemailer.getTestMessageUrl(info);
@@ -290,7 +311,6 @@ app.post('/api/test-forgot-password', async (req, res) => {
             });
         }
 
-        // Generate reset token
         const resetToken = crypto.randomBytes(32).toString('hex');
         const resetTokenHash = crypto
             .createHash('sha256')
@@ -306,7 +326,6 @@ app.post('/api/test-forgot-password', async (req, res) => {
         
         console.log('🔗 Reset URL:', resetUrl);
 
-        // Check if we should use Ethereal
         const useEthereal = process.env.USE_ETHEREAL === 'true' || !process.env.EMAIL_USER || !process.env.EMAIL_PASS;
         
         let transporter;
@@ -358,7 +377,6 @@ app.post('/api/test-forgot-password', async (req, res) => {
                 `
             };
         } else {
-            // Use Gmail
             if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
                 return res.status(500).json({
                     success: false,

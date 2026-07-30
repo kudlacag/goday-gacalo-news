@@ -1,15 +1,18 @@
 <!DOCTYPE html>
 <html>
-<head>
-  <meta charset="utf-8">
-  <title>Godey Gacalo News</title>
-  <script>
-    // Redirect to the main page
-    window.location.href = '/godey-gacalo-news/';
-  </script>
-</head>
-<body>
-  <h1>Redirecting...</h1>
-  <p><a href="/godey-gacalo-news/">Click here if you are not redirected</a></p>
-</body>
+  <head>
+    <meta charset="utf-8" />
+    <title>Godey Gacalo News</title>
+    <script>
+      // Save the full path the user requested
+      const path = window.location.pathname + window.location.search + window.location.hash;
+      sessionStorage.setItem('redirect', path);
+      
+      // Redirect to the main app
+      window.location.href = '/';
+    </script>
+  </head>
+  <body>
+    <p>Redirecting to the app...</p>
+  </body>
 </html>

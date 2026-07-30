@@ -6,17 +6,33 @@ const jwt = require('jsonwebtoken');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const { auth, isAdmin, isSuperAdmin } = require('../middleware/auth');
 
 // ========== FILE UPLOAD ==========
-const uploadDir = './uploads';
+// Check multiple possible uploads locations
+const possibleUploadDirs = [
+    './uploads',
+    './backend/uploads',
+    '../uploads'
+];
+
+let uploadDir = './uploads';
+for (const dir of possibleUploadDirs) {
+    if (fs.existsSync(dir)) {
+        uploadDir = dir;
+        console.log(`📁 Uploads directory found at: ${uploadDir}`);
+        break;
+    }
+}
+
+// Create uploads directory if it doesn't exist
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
+    console.log(`📁 Created uploads directory at: ${uploadDir}`);
 }
 
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
-        cb(null, 'uploads/');
+        cb(null, uploadDir);
     },
     filename: (req, file, cb) => {
         const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -41,6 +57,76 @@ const upload = multer({
     limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: fileFilter
 });
+
+// ========== AUTHENTICATION MIDDLEWARE ==========
+const auth = async (req, res, next) => {
+    try {
+        const token = req.header('Authorization')?.replace('Bearer ', '');
+        
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                error: 'No token provided'
+            });
+        }
+
+        const decoded = jwt.verify(token, process.env.JWT_SECRET || 'your-secret-key');
+        const user = await User.findById(decoded.id);
+
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                error: 'User not found'
+            });
+        }
+
+        req.user = user;
+        req.token = token;
+        next();
+    } catch (error) {
+        console.error('Auth error:', error);
+        res.status(401).json({
+            success: false,
+            error: 'Please authenticate'
+        });
+    }
+};
+
+// ========== ADMIN MIDDLEWARE ==========
+const isAdmin = async (req, res, next) => {
+    try {
+        if (req.user.role !== 'admin' && req.user.role !== 'super_admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Admin access required'
+            });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
+
+// ========== SUPER ADMIN MIDDLEWARE ==========
+const isSuperAdmin = async (req, res, next) => {
+    try {
+        if (req.user.role !== 'super_admin') {
+            return res.status(403).json({
+                success: false,
+                error: 'Super Admin access required'
+            });
+        }
+        next();
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+};
 
 // ========== ADMIN LOGIN ==========
 router.post('/login', async (req, res) => {
@@ -112,6 +198,7 @@ router.post('/news', auth, isAdmin, upload.array('images', 10), async (req, res)
             });
         }
 
+        // ✅ Use the correct base URL for images
         const baseUrl = process.env.RENDER_EXTERNAL_URL || `http://localhost:${process.env.PORT || 10000}`;
         console.log('📸 Base URL for images:', baseUrl);
 
@@ -227,7 +314,7 @@ router.delete('/news/:id', auth, isAdmin, async (req, res) => {
     }
 });
 
-// ========== GET ALL NEWS ==========
+// ========== GET ALL NEWS (Admin) ==========
 router.get('/news', auth, isAdmin, async (req, res) => {
     try {
         const news = await News.find()
@@ -247,7 +334,7 @@ router.get('/news', auth, isAdmin, async (req, res) => {
     }
 });
 
-// ========== ✅ GET ALL USERS ==========
+// ========== GET ALL USERS ==========
 router.get('/users', auth, isAdmin, async (req, res) => {
     try {
         const users = await User.find()
@@ -267,7 +354,7 @@ router.get('/users', auth, isAdmin, async (req, res) => {
     }
 });
 
-// ========== ✅ CREATE USER ==========
+// ========== CREATE USER ==========
 router.post('/users', auth, isSuperAdmin, async (req, res) => {
     try {
         const { name, username, email, password, mobile, age, sex, role } = req.body;
@@ -331,7 +418,7 @@ router.post('/users', auth, isSuperAdmin, async (req, res) => {
     }
 });
 
-// ========== ✅ UPDATE USER ROLE ==========
+// ========== UPDATE USER ROLE ==========
 router.put('/users/:id/role', auth, isSuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
@@ -383,7 +470,7 @@ router.put('/users/:id/role', auth, isSuperAdmin, async (req, res) => {
     }
 });
 
-// ========== ✅ DELETE USER ==========
+// ========== DELETE USER ==========
 router.delete('/users/:id', auth, isSuperAdmin, async (req, res) => {
     try {
         const { id } = req.params;
