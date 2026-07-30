@@ -155,7 +155,7 @@ function AppContent() {
                         {/* Categories Dropdown */}
                         {dropdownCats.length > 0 && (
                             <div className="dropdown-container">
-                                <button 
+                                <button
                                     className={`dropdown-toggle nav-link ${isCategoryDropdownOpen ? 'active' : ''}`}
                                     onClick={toggleCategoryDropdown}
                                 >
@@ -264,6 +264,7 @@ function AppContent() {
                 <Route path="/manage-news" element={<ManageNews user={user} />} />
                 <Route path="/users" element={<UserManagement />} />
                 <Route path="/news/:id" element={<NewsDetail user={user} />} />
+                <Route path="/og/*" element={<Navigate to="/" replace />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
         </div>

@@ -15,7 +15,9 @@ const ShareButtons = ({ article }) => {
     };
 
     // Build the share URL using the OG route
-    const shareUrl = `https://www.godaygacalo.com/og/news/${article._id}`;
+    // In ShareButtons.js - Update the shareUrl
+   // In ShareButtons.js - Update the shareUrl
+const shareUrl = `https://www.godaygacalo.com/og.html#news/${article._id}`;
     const title = article.title;
     const summary = article.summary || article.content.substring(0, 150);
 
