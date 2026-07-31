@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getNews, getFeaturedNews, getImageUrl } from '../api/api'; // ✅ Import getImageUrl
+import { getNews, getFeaturedNews, getImageUrl } from '../api/api';
 import NewsSlider from '../components/NewsSlider';
 
 function Home({ selectedCategory = 'All', user }) {
@@ -28,10 +28,7 @@ function Home({ selectedCategory = 'All', user }) {
 
     const fetchFeatured = async () => {
         try {
-            // console.log('📡 Fetching featured news...');
             const response = await getFeaturedNews();
-            // console.log('📡 Featured response:', response);
-            
             if (response && response.success) {
                 setFeatured(response.data || []);
             } else {
@@ -53,7 +50,6 @@ function Home({ selectedCategory = 'All', user }) {
             }
 
             const response = await getNews(pageNum, 15, category);
-            // console.log('📡 News response:', response);
             
             if (response && response.success) {
                 if (pageNum === 1) {
@@ -206,7 +202,6 @@ function Home({ selectedCategory = 'All', user }) {
                             <Link to={`/news/${item._id}`} key={item._id} className="news-card-link">
                                 <div className="news-card">
                                     {item.images && item.images.length > 0 ? (
-                                        // ✅ FIXED: Use getImageUrl helper
                                         <img src={getImageUrl(item.images[0])} alt={item.title} />
                                     ) : (
                                         <div className="no-image">📰</div>
@@ -237,7 +232,6 @@ function Home({ selectedCategory = 'All', user }) {
                             <Link to={`/news/${item._id}`} key={item._id} className="scroll-card-link">
                                 <div className="scroll-card">
                                     {item.images && item.images.length > 0 ? (
-                                        // ✅ FIXED: Use getImageUrl helper
                                         <img src={getImageUrl(item.images[0])} alt={item.title} />
                                     ) : (
                                         <div className="no-image-small">📰</div>
@@ -280,7 +274,7 @@ function Home({ selectedCategory = 'All', user }) {
                 }
 
                 .category-header {
-                    padding: 15px 20px;
+                    padding: 12px 15px;
                     background: white;
                     border-bottom: 2px solid #e8f0fe;
                     display: flex;
@@ -289,42 +283,43 @@ function Home({ selectedCategory = 'All', user }) {
                 }
 
                 .category-header h1 {
-                    font-size: 1.4rem;
+                    font-size: 1.2rem;
                     color: #1a365d;
                     font-weight: 700;
+                    margin: 0;
                 }
 
                 .category-header span {
                     color: #a0aec0;
-                    font-size: 0.85rem;
+                    font-size: 0.75rem;
                     background: #f0f4ff;
-                    padding: 4px 12px;
+                    padding: 3px 10px;
                     border-radius: 20px;
                 }
 
                 .no-articles {
                     text-align: center;
-                    padding: 60px 20px;
+                    padding: 40px 20px;
                     color: #4a5568;
-                    font-size: 1.1rem;
+                    font-size: 1rem;
                 }
 
                 .grid-section {
-                    padding: 15px;
+                    padding: 10px;
                     background: #f0f4ff;
                 }
 
                 .grid-title h2 {
-                    font-size: 1.3rem;
+                    font-size: 1.1rem;
                     color: #1a365d;
-                    margin-bottom: 15px;
+                    margin-bottom: 10px;
                     font-weight: 700;
                 }
 
                 .news-grid {
                     display: grid;
                     grid-template-columns: 1fr;
-                    gap: 12px;
+                    gap: 10px;
                 }
 
                 .news-card-link {
@@ -367,7 +362,7 @@ function Home({ selectedCategory = 'All', user }) {
                 }
 
                 .news-content {
-                    padding: 15px;
+                    padding: 12px 15px;
                     flex: 1;
                     display: flex;
                     flex-direction: column;
@@ -377,20 +372,20 @@ function Home({ selectedCategory = 'All', user }) {
                     display: inline-block;
                     background: #2563eb;
                     color: white;
-                    padding: 4px 12px;
+                    padding: 3px 10px;
                     border-radius: 20px;
-                    font-size: 0.7rem;
+                    font-size: 0.65rem;
                     text-transform: uppercase;
                     letter-spacing: 0.5px;
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                     align-self: flex-start;
                 }
 
                 .news-content h3 {
-                    font-size: 1.1rem;
+                    font-size: 0.95rem;
                     color: #1a202c;
                     line-height: 1.4;
-                    margin-bottom: 8px;
+                    margin-bottom: 6px;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
@@ -399,10 +394,10 @@ function Home({ selectedCategory = 'All', user }) {
 
                 .news-content p {
                     color: #4a5568;
-                    font-size: 0.9rem;
-                    line-height: 1.6;
+                    font-size: 0.85rem;
+                    line-height: 1.5;
                     display: -webkit-box;
-                    -webkit-line-clamp: 3;
+                    -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
                     flex: 1;
@@ -410,14 +405,21 @@ function Home({ selectedCategory = 'All', user }) {
 
                 .news-meta {
                     display: flex;
-                    gap: 12px;
+                    gap: 10px;
                     color: #a0aec0;
-                    font-size: 0.75rem;
-                    margin-top: 10px;
+                    font-size: 0.7rem;
+                    margin-top: 8px;
+                    flex-wrap: wrap;
+                }
+
+                .news-meta span {
+                    display: flex;
+                    align-items: center;
+                    gap: 2px;
                 }
 
                 .scroll-section {
-                    padding: 0 15px 15px;
+                    padding: 0 10px 10px;
                     background: #f0f4ff;
                 }
 
@@ -485,31 +487,32 @@ function Home({ selectedCategory = 'All', user }) {
                     font-size: 0.6rem;
                     text-transform: uppercase;
                     letter-spacing: 0.3px;
-                    margin-bottom: 6px;
+                    margin-bottom: 4px;
                     align-self: flex-start;
                 }
 
                 .scroll-content h4 {
-                    font-size: 0.95rem;
+                    font-size: 0.9rem;
                     color: #1a202c;
                     line-height: 1.3;
                     display: -webkit-box;
                     -webkit-line-clamp: 2;
                     -webkit-box-orient: vertical;
                     overflow: hidden;
+                    margin: 0;
                 }
 
                 .scroll-meta {
                     display: flex;
                     gap: 10px;
-                    font-size: 0.65rem;
+                    font-size: 0.6rem;
                     color: #a0aec0;
                     margin-top: 4px;
                 }
 
                 .loading-more {
                     text-align: center;
-                    padding: 30px;
+                    padding: 20px;
                     display: flex;
                     flex-direction: column;
                     align-items: center;
@@ -527,9 +530,9 @@ function Home({ selectedCategory = 'All', user }) {
 
                 .no-more {
                     text-align: center;
-                    padding: 30px;
+                    padding: 20px;
                     color: #a0aec0;
-                    font-size: 0.9rem;
+                    font-size: 0.85rem;
                 }
 
                 @keyframes spin {
@@ -537,7 +540,127 @@ function Home({ selectedCategory = 'All', user }) {
                     100% { transform: rotate(360deg); }
                 }
 
-                @media (min-width: 601px) and (max-width: 1024px) {
+                /* ========== MOBILE RESPONSIVE - COMPACT CARDS ========== */
+                @media (max-width: 768px) {
+                    .category-header {
+                        padding: 10px 12px;
+                    }
+
+                    .category-header h1 {
+                        font-size: 1rem;
+                    }
+
+                    .grid-section {
+                        padding: 8px;
+                    }
+
+                    .grid-title h2 {
+                        font-size: 0.95rem;
+                        margin-bottom: 8px;
+                    }
+
+                    .news-grid {
+                        gap: 8px;
+                    }
+
+                    /* ✅ COMPACT NEWS CARD FOR MOBILE */
+                    .news-card {
+                        flex-direction: row !important;
+                        padding: 8px !important;
+                        gap: 10px;
+                        height: auto !important;
+                        min-height: 70px;
+                        border-radius: 10px;
+                        align-items: center;
+                    }
+
+                    .news-card img {
+                        width: 70px !important;
+                        height: 70px !important;
+                        border-radius: 8px !important;
+                        object-fit: cover;
+                        flex-shrink: 0;
+                    }
+
+                    .news-card .no-image {
+                        width: 70px !important;
+                        height: 70px !important;
+                        font-size: 1.5rem !important;
+                        flex-shrink: 0;
+                        border-radius: 8px !important;
+                    }
+
+                    .news-content {
+                        padding: 0 !important;
+                        flex: 1;
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: center;
+                        gap: 2px;
+                    }
+
+                    .news-content .category {
+                        font-size: 0.5rem !important;
+                        padding: 2px 6px !important;
+                        margin-bottom: 2px !important;
+                    }
+
+                    .news-content h3 {
+                        font-size: 0.75rem !important;
+                        line-height: 1.3 !important;
+                        -webkit-line-clamp: 2 !important;
+                        margin-bottom: 2px !important;
+                    }
+
+                    .news-content p {
+                        display: none !important;
+                    }
+
+                    .news-meta {
+                        font-size: 0.55rem !important;
+                        gap: 4px !important;
+                        margin-top: 0 !important;
+                    }
+
+                    .news-meta span {
+                        font-size: 0.55rem !important;
+                    }
+
+                    .scroll-card {
+                        padding: 8px !important;
+                        gap: 8px !important;
+                    }
+
+                    .scroll-card img {
+                        width: 80px !important;
+                        height: 60px !important;
+                    }
+
+                    .scroll-content h4 {
+                        font-size: 0.75rem !important;
+                    }
+
+                    .scroll-meta {
+                        font-size: 0.55rem !important;
+                    }
+
+                    .scroll-category {
+                        font-size: 0.5rem !important;
+                        padding: 2px 6px !important;
+                    }
+
+                    .no-more {
+                        padding: 15px;
+                        font-size: 0.8rem;
+                    }
+
+                    .loading-more {
+                        padding: 15px;
+                    }
+                }
+
+                /* ========== TABLET ========== */
+                @media (min-width: 769px) and (max-width: 1024px) {
                     .news-grid {
                         grid-template-columns: repeat(2, 1fr);
                         gap: 15px;
@@ -550,6 +673,7 @@ function Home({ selectedCategory = 'All', user }) {
                     }
                 }
 
+                /* ========== DESKTOP ========== */
                 @media (min-width: 1025px) {
                     .news-grid {
                         grid-template-columns: repeat(3, 1fr);
@@ -587,6 +711,7 @@ function Home({ selectedCategory = 'All', user }) {
                     }
                 }
 
+                /* ========== LARGE DESKTOP ========== */
                 @media (min-width: 1400px) {
                     .news-grid {
                         grid-template-columns: repeat(4, 1fr);
