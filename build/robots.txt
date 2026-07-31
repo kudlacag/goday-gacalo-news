@@ -2,3 +2,15 @@
 User-agent: *
 Disallow:
 Sitemap: https://yourusername.github.io/goday-gacalo-news/sitemap.xml
+# Allow all crawlers
+User-agent: *
+Allow: /
+
+# Sitemap location
+Sitemap: https://www.godaygacalo.com/sitemap.xml
+
+# Disallow admin pages
+Disallow: /admin/
+Disallow: /manage-news/
+Disallow: /users/
+Disallow: /profile/

@@ -1,13 +1,21 @@
 {
-  "files": {
-    "main.css": "/goday-gacalo-news/static/css/main.4a95eec7.css",
-    "main.js": "/goday-gacalo-news/static/js/main.897cb79f.js",
-    "index.html": "/goday-gacalo-news/index.html",
-    "main.4a95eec7.css.map": "/goday-gacalo-news/static/css/main.4a95eec7.css.map",
-    "main.897cb79f.js.map": "/goday-gacalo-news/static/js/main.897cb79f.js.map"
-  },
-  "entrypoints": [
-    "static/css/main.4a95eec7.css",
-    "static/js/main.897cb79f.js"
-  ]
+    "name": "Godey Gacalo News",
+    "short_name": "Godey News",
+    "description": "Godey Gacalo News - Wararka Godey, Jigjiga, Soomaali Galbeed",
+    "icons": [
+        {
+            "src": "android-chrome-192x192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "android-chrome-512x512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ],
+    "theme_color": "#1a365d",
+    "background_color": "#ffffff",
+    "display": "standalone",
+    "start_url": "/"
 }
